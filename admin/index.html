@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة تحكم فرحات</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="../images/logo_icon.png" type="image/png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+<!-- شاشة تسجيل الدخول -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <img src="../images/logo_icon.png" alt="فرحات" class="login-logo">
+    <h1>لوحة تحكم فرحات</h1>
+    <p class="login-sub">سجّل دخولك عشان تدير المنتجات والطلبات</p>
+
+    <form id="loginForm" class="login-form">
+      <label>
+        الإيميل
+        <input type="email" id="loginEmail" required autocomplete="username">
+      </label>
+      <label>
+        كلمة السر
+        <input type="password" id="loginPassword" required autocomplete="current-password">
+      </label>
+      <p class="login-error" id="loginError"></p>
+      <button type="submit" class="btn-solid" id="loginBtn">دخول</button>
+    </form>
+  </div>
+</div>
+
+<!-- الداشبورد -->
+<div class="dash" id="dashScreen" hidden>
+  <header class="dash-header">
+    <div class="dash-brand">
+      <img src="../images/logo_icon.png" alt="فرحات">
+      <span>لوحة تحكم فرحات</span>
+    </div>
+    <div class="dash-header-actions">
+      <a href="../index.html" target="_blank" class="dash-link">👁️ شوف الموقع</a>
+      <button type="button" class="dash-link" id="logoutBtn">🚪 تسجيل خروج</button>
+    </div>
+  </header>
+
+  <nav class="dash-tabs">
+    <button type="button" class="dash-tab active" data-panel="overview">📊 نظرة عامة</button>
+    <button type="button" class="dash-tab" data-panel="products">🛍️ المنتجات</button>
+    <button type="button" class="dash-tab" data-panel="orders">🧾 الطلبات</button>
+  </nav>
+
+  <main class="dash-main">
+
+    <!-- نظرة عامة -->
+    <section class="dash-panel active" id="panel-overview">
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-icon">🧾</span>
+          <span class="stat-value" id="statOrders">—</span>
+          <span class="stat-label">إجمالي الطلبات</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">💰</span>
+          <span class="stat-value" id="statRevenue">—</span>
+          <span class="stat-label">إجمالي المبيعات التقريبي (ج.م)</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">👀</span>
+          <span class="stat-value" id="statVisits">—</span>
+          <span class="stat-label">عدد زيارات الموقع</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-icon">📦</span>
+          <span class="stat-value" id="statProducts">—</span>
+          <span class="stat-label">عدد المنتجات</span>
+        </div>
+      </div>
+
+      <div class="dash-two-col">
+        <div class="panel-box">
+          <h3>⭐ الأكثر طلبًا (حسب الطلبات الفعلية)</h3>
+          <div id="topProductsList" class="simple-list">
+            <p class="empty-hint">لسه مفيش بيانات كفاية — هتظهر هنا أول ما يوصل طلبات.</p>
+          </div>
+        </div>
+        <div class="panel-box">
+          <h3>🕐 أحدث الطلبات</h3>
+          <div id="recentOrdersList" class="simple-list">
+            <p class="empty-hint">لسه مفيش طلبات مسجّلة.</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="dash-note">
+        ملحوظة: العدد ده بيسجّل كل مرة حد يفتح فيها الموقع (page views)، مش عدد
+        الزوار الفريدين. وعدد الطلبات وإجمالي المبيعات مبنيين على الطلبات اللي
+        اتسجّلت من الموقع بس بعد ما اتفعّلت لوحة التحكم.
+      </p>
+    </section>
+
+    <!-- المنتجات -->
+    <section class="dash-panel" id="panel-products">
+      <div class="panel-toolbar">
+        <button type="button" class="btn-solid" id="addProductBtn">+ إضافة منتج</button>
+        <button type="button" class="btn-outline" id="seedBtn" hidden>⬇️ تعبئة المنتجات الأساسية أول مرة</button>
+        <input type="text" id="productSearch" class="toolbar-search" placeholder="دور على منتج...">
+      </div>
+      <div class="table-wrap">
+        <table class="dash-table" id="productsTable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>الاسم</th>
+              <th>القسم</th>
+              <th>السعر</th>
+              <th>الأكثر طلبًا</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="productsTbody"></tbody>
+        </table>
+        <p class="empty-hint" id="productsEmptyHint" hidden>لسه مفيش منتجات. دوس "تعبئة المنتجات الأساسية" أو "+ إضافة منتج".</p>
+      </div>
+    </section>
+
+    <!-- الطلبات -->
+    <section class="dash-panel" id="panel-orders">
+      <div class="table-wrap">
+        <table class="dash-table" id="ordersTable">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>الاسم</th>
+              <th>المنطقة</th>
+              <th>الإجمالي</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="ordersTbody"></tbody>
+        </table>
+        <p class="empty-hint" id="ordersEmptyHint" hidden>لسه مفيش طلبات مسجّلة.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- بوب-أب إضافة/تعديل منتج -->
+<div class="modal-overlay" id="productModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="productModalTitle">إضافة منتج</h2>
+      <button type="button" class="modal-close" id="productModalClose">✕</button>
+    </div>
+    <form id="productForm" class="modal-form">
+      <label>
+        اسم المنتج *
+        <input type="text" id="pfName" required>
+      </label>
+
+      <div class="form-row">
+        <label>
+          القسم *
+          <select id="pfSection" required></select>
+        </label>
+        <label id="pfTabWrap" hidden>
+          التبويب
+          <select id="pfTab"></select>
+        </label>
+      </div>
+
+      <div class="form-row">
+        <label>
+          السعر (بالجنيه)
+          <input type="number" id="pfPrice" min="0" step="1" placeholder="سيبه فاضي لو من غير سعر ثابت">
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" id="pfBestseller">
+          ⭐ الأكثر طلبًا
+        </label>
+      </div>
+
+      <label>
+        رابط الصورة
+        <input type="text" id="pfImg" placeholder="images/nuts/example.jpg">
+      </label>
+
+      <label class="checkbox-label">
+        <input type="checkbox" id="pfCustomBox">
+        صنف خاص: علبة اختيار حر (زي علبة هدايا فرحات)
+      </label>
+
+      <div id="pfCustomBoxFields" class="custom-box-fields" hidden>
+        <div class="form-row">
+          <label>
+            أقل وزن
+            <input type="number" id="pfMinWeight" step="0.25" min="0">
+          </label>
+          <label>
+            أعلى وزن
+            <input type="number" id="pfMaxWeight" step="0.25" min="0">
+          </label>
+        </div>
+        <label>
+          وحدة الوزن
+          <input type="text" id="pfWeightUnitLabel" placeholder="كيلو">
+        </label>
+        <label>
+          التبويب اللي العميل هيختار منه
+          <select id="pfLinkToTab"></select>
+        </label>
+        <label>
+          نص التنويه تحت الصورة
+          <textarea id="pfNote" rows="2"></textarea>
+        </label>
+      </div>
+
+      <p class="form-error" id="productFormError"></p>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" id="productDeleteBtn" hidden>حذف المنتج</button>
+        <button type="submit" class="btn-solid">حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-overlay" id="orderModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2>تفاصيل الطلب</h2>
+      <button type="button" class="modal-close" id="orderModalClose">✕</button>
+    </div>
+    <div id="orderModalBody" class="order-detail"></div>
+  </div>
+</div>
+
+<div class="toast" id="dashToast"></div>
+
+<script type="module" src="../firebase-init.js"></script>
+<script src="../data.js"></script>
+<script type="module" src="admin.js"></script>
+</body>
+</html>

@@ -64,6 +64,9 @@ function sectionItemCount(section) {
 }
 
 function buildSections() {
+  els.sections.innerHTML = ""; // عشان نقدر نعيد البناء بأمان لما بيانات Firestore توصل
+  els.nav.innerHTML = "";
+  els.chips.innerHTML = "";
   STORE.sections.forEach((section) => {
     const sec = document.createElement("section");
     sec.className = "product-section";
@@ -919,7 +922,33 @@ els.confirmBtn.addEventListener("click", () => {
   const text = encodeURIComponent(buildOrderMessage());
   const url = `https://wa.me/${STORE.whatsapp}?text=${text}`;
   window.open(url, "_blank");
+  logOrderToFirestore(); // من غير ما ننتظرها، عشان متأخرش فتح واتساب
 });
+
+// بتسجّل الطلب في لوحة التحكم (لو الاتصال بـ Firebase شغال). لو فشلت لأي
+// سبب (نت واقع، إعدادات لسه ماتظبطتش)، الطلب برضو بيوصل عادي على واتساب —
+// دي مجرد نسخة إضافية للإحصائيات، مش شرط لإتمام الطلب.
+function logOrderToFirestore() {
+  if (!window.Farahat || !window.Farahat.addOrder) return;
+  const items = Object.values(cart).map((l) => ({
+    name: l.name,
+    price: l.price,
+    qty: l.qty,
+    weightLabel: l.weightLabel || null,
+    composition: l.composition || null,
+    section: l.section,
+  }));
+  window.Farahat
+    .addOrder({
+      items,
+      total: cartTotalValue(),
+      customerName: els.custName.value.trim(),
+      address: els.custAddress.value.trim(),
+      note: els.custNote.value.trim(),
+      region: els.custRegion.value,
+    })
+    .catch((e) => console.warn("Farahat: تعذّر تسجيل الطلب في لوحة التحكم.", e));
+}
 
 function validateCustomerFields() {
   let ok = true;
@@ -1082,3 +1111,64 @@ function restoreCustomerInfo() {
     loader.addEventListener("transitionend", () => loader.remove(), { once: true });
   }, 3000);
 })();
+
+/* --------------------- ربط المنتجات الحية من لوحة التحكم ------------------- */
+// الموقع بيتبني الأول بالأسعار الأساسية اللي في data.js (عشان يظهر فورًا من
+// غير ما ينتظر النت)، وبعد كده لو لقى منتجات محدّثة من لوحة التحكم (Firestore)
+// بيستبدلها بهدوء من غير ما يحتاج تحميل الصفحة تاني.
+
+function mergeLiveProducts(products) {
+  if (!Array.isArray(products) || products.length === 0) return false;
+
+  const bySectionTab = {};
+  products.forEach((p) => {
+    const key = `${p.sectionId}::${p.tabId || ""}`;
+    if (!bySectionTab[key]) bySectionTab[key] = [];
+    bySectionTab[key].push(p);
+  });
+
+  let changed = false;
+  STORE.sections.forEach((section) => {
+    if (section.tabs) {
+      section.tabs.forEach((tab) => {
+        const key = `${section.id}::${tab.id}`;
+        if (bySectionTab[key]) {
+          tab.items = bySectionTab[key];
+          changed = true;
+        }
+      });
+    } else {
+      const key = `${section.id}::`;
+      if (bySectionTab[key]) {
+        section.items = bySectionTab[key];
+        changed = true;
+      }
+    }
+  });
+  return changed;
+}
+
+window.addEventListener("farahat-products-ready", (e) => {
+  const changed = mergeLiveProducts(e.detail);
+  if (!changed) return;
+  buildSections();
+  searchIndex = buildSearchIndex();
+  setupScrollSpy();
+  setupScrollReveal();
+  setupNavScrollHint();
+  rebuildAllCardActions();
+});
+
+if (window.Farahat) {
+  window.Farahat.fetchProducts()
+    .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
+    .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
+  window.Farahat.incrementVisit();
+} else {
+  window.addEventListener("farahat-firebase-ready", () => {
+    window.Farahat.fetchProducts()
+      .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
+      .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
+    window.Farahat.incrementVisit();
+  });
+}
