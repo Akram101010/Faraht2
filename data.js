@@ -69,6 +69,12 @@
    كل صنف يختار منهم العميل. كل خيار بياخد priceAdd (بالجنيه) بيتضاف
    على سعر الكيلو الأساسي قبل ما يتحسب سعر الوزن المختار. عدّل رقم الـ
    priceAdd هنا لو فرق سعر المحوج عن الساده مختلف عن 15 جنيه/كيلو.
+   -------------------------------------------------------------------------
+   excludeFromBox (تبويب شكولاتة بالوزن بس):
+   -------------------------------------------------------------------------
+   أي صنف عليه excludeFromBox: true بيظهر عادي في "شكولاتة بالوزن" للبيع
+   المباشر، بس مش بيظهر ضمن الأنواع اللي العميل يقدر يختارها لما يكوّن
+   "علبة هدايا فرحات الخاصة".
    ========================================================================== */
 
 const WEIGHT_OPTIONS = [
@@ -153,8 +159,8 @@ const STORE = {
             { name: "بن كولمبي إكسترا", price: 1040, img: "images/coffee/e15_colombian_extra.jpg" },
             { name: "بن جواتيمالا", price: 1000, img: "images/coffee/e10_guatemala.jpg" },
             { name: "بن ميسور", price: 1120, img: "images/coffee/e17_maysour.jpg" },
-            { name: "قهوة فرنسي", price: 760, img: "images/coffee/e07_french.jpg" },
-            { name: "قهوة بندق", price: 760, img: "images/coffee/e18_hazelnut.jpg" },
+            { name: "قهوة فرنسي", price: 760, img: "images/coffee/e07_french.jpg", noGrind: true },
+            { name: "قهوة بندق", price: 760, img: "images/coffee/e18_hazelnut.jpg", noGrind: true },
             { name: "بن بيرو", price: 960, img: "images/coffee/e19_peru.jpg" },
           ],
         },
@@ -184,16 +190,16 @@ const STORE = {
         },
         {
           id: "mabakhir",
-          title: "مبخرات",
+          title: "سبرتايات",
           icon: "🔥",
           unit: "جنيه / قطعة",
           items: [
-            { name: "مبخرة كلاسيك 1", price: 320, img: "images/mabakhir/mabkhara_classic_1.jpg" },
-            { name: "مبخرة كلاسيك 2", price: 360, img: "images/mabakhir/mabkhara_classic_2.jpg" },
-            { name: "مبخرة كلاسيك 3", price: 360, img: "images/mabakhir/mabkhara_classic_3.jpg" },
-            { name: "مبخرة كلاسيك 4", price: 380, img: "images/mabakhir/mabkhara_classic_4.jpg" },
-            { name: "مبخرة ملكي 1", price: 700, img: "images/mabakhir/mabkhara_malaki_1.jpg" },
-            { name: "مبخرة ملكي 2", price: 1200, img: "images/mabakhir/mabkhara_malaki_2.jpg" },
+            { name: "سبرتايه كلاسيك 1", price: 320, img: "images/mabakhir/sabartaya_classic_1.jpg" },
+            { name: "سبرتايه كلاسيك 2", price: 360, img: "images/mabakhir/sabartaya_classic_2.jpg" },
+            { name: "سبرتايه كلاسيك 3", price: 360, img: "images/mabakhir/sabartaya_classic_3.jpg" },
+            { name: "سبرتايه كلاسيك 4", price: 380, img: "images/mabakhir/sabartaya_classic_4.jpg" },
+            { name: "سبرتايه ملكي 1", price: 700, img: "images/mabakhir/sabartaya_malaki_1.jpg" },
+            { name: "سبرتايه ملكي 2", price: 1200, img: "images/mabakhir/sabartaya_malaki_2.jpg" },
             { name: "أبريق", price: 700, img: "images/mabakhir/abriq.jpg" },
             { name: "كنكة كلاسيك 1", price: 250, img: "images/mabakhir/kanaka_classic_1.jpg" },
           ],
@@ -235,6 +241,27 @@ const STORE = {
             { name: "شوكو لونس", price: 360, img: "images/choc/d4_choco_lotus.jpg" },
             { name: "كريسبي", price: 320, img: "images/choc/d5_crispy.jpg" },
             { name: "ويفر", price: 320, img: "images/choc/d6_wafer.jpg" },
+            // 16 صنف جديد (توفي أولكر، أوريو كاريه، كريسبينو، بسكوت كاريه،
+            // سوداني بالكرامل، ميجا) — excludeFromBox: true عشان ميظهروش
+            // ضمن الأنواع اللي العميل يقدر يختارها في "علبة هدايا فرحات
+            // الخاصة" (مطلوب صراحة إنهم يفضلوا للبيع بالوزن هنا بس).
+            // الأسعار دلوقتي مبدئية 100 لحد ما تحددها انت.
+            { name: "طوفي بالتوت", price: 100, img: "images/choc/e01_toffee_blackberry.jpg", excludeFromBox: true },
+            { name: "طوفي بالمستكة", price: 100, img: "images/choc/e02_toffee_mastic.jpg", excludeFromBox: true },
+            { name: "طوفي بالنعناع", price: 100, img: "images/choc/e03_toffee_mint.jpg", excludeFromBox: true },
+            { name: "طوفي بالبطيخ", price: 100, img: "images/choc/e04_toffee_watermelon.jpg", excludeFromBox: true },
+            { name: "طوفي بالحليب", price: 100, img: "images/choc/e05_toffee_milk.jpg", excludeFromBox: true },
+            { name: "طوفي بالفراولة", price: 100, img: "images/choc/e06_toffee_strawberry.jpg", excludeFromBox: true },
+            { name: "طوفي بالكراميل", price: 100, img: "images/choc/e07_toffee_caramel.jpg", excludeFromBox: true },
+            { name: "أوريو شيكولاتة", price: 100, img: "images/choc/e08_oreo_choco.jpg", excludeFromBox: true },
+            { name: "أوريو أبيض", price: 100, img: "images/choc/e09_oreo_white.jpg", excludeFromBox: true },
+            { name: "كريسبينو", price: 100, img: "images/choc/e10_crispino.jpg", excludeFromBox: true },
+            { name: "بسكوت ضوابع أبيض", price: 100, img: "images/choc/e11_biscuit_white_hazelnut.jpg", excludeFromBox: true },
+            { name: "بسكوت ضوابع شيكولاتة", price: 100, img: "images/choc/e12_biscuit_choco_hazelnut.jpg", excludeFromBox: true },
+            { name: "سوداني بالكراميل", price: 100, img: "images/choc/e13_peanut_caramel.jpg", excludeFromBox: true },
+            { name: "طوفي بجوز الهند", price: 100, img: "images/choc/e14_toffee_coconut.jpg", excludeFromBox: true },
+            { name: "كاريه جوز هند", price: 100, img: "images/choc/e15_carre_coconut.jpg", excludeFromBox: true },
+            { name: "ميجا كراميل", price: 100, img: "images/choc/e16_mega_caramel.jpg", excludeFromBox: true },
           ],
         },
         {
@@ -261,6 +288,13 @@ const STORE = {
             { name: "علبة Good Morning – أزرق", price: 600, img: "images/choc-boxes/box06_goodmorning_blue.jpg" },
             { name: "علبة Good Morning – مواليد", price: 600, img: "images/choc-boxes/box07_goodmorning_baby.jpg" },
             { name: "علبة Good Morning – أبيض ذهبي", price: 600, img: "images/choc-boxes/box08_goodmorning_gold.jpg" },
+            // 5 أصناف جديدة (فيريرو روشيه بحجمين، فاليرو كراميل بـ3 تصاميم) —
+            // أسعار مبدئية 100، هتتظبط من الداشبورد.
+            { name: "فيريرو روشيه 16 قطعة", price: 100, img: "images/choc-boxes/box09_ferrero_16.jpg" },
+            { name: "فاليرو شوكولاتة كراميل - تصميم الجبال", price: 100, img: "images/choc-boxes/box10_valero_caramel_v1.jpg" },
+            { name: "فاليرو شوكولاتة كراميل - تصميم الأقواس", price: 100, img: "images/choc-boxes/box11_valero_caramel_v2.jpg" },
+            { name: "فيريرو روشيه 24 قطعة", price: 100, img: "images/choc-boxes/box12_ferrero_24.jpg" },
+            { name: "فاليرو بريميوم كراميل 1 كيلو", price: 100, img: "images/choc-boxes/box13_valero_premium.jpg" },
           ],
         },
       ],

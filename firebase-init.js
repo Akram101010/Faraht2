@@ -1,8 +1,10 @@
 /* ==========================================================================
    ربط فرحات بـ Firebase — ملف مشترك بين الموقع الرئيسي ولوحة التحكم
    -------------------------------------------------------------------------
-   الموقع الرئيسي (app.js) بيستخدم منه: fetchProducts, addOrder, incrementVisit
-   لوحة التحكم (admin/admin.js) بتستخدم كل الدوال.
+   الموقع الرئيسي (app.js) بيستخدم منه: fetchProducts, fetchDeals, addOrder,
+   incrementVisit
+   لوحة التحكم (admin/admin.js) بتستخدم كل الدوال، بما فيها عروض اليوم
+   ورفع الصور (uploadImage عن طريق Firebase Storage — محتاج خطة Blaze).
 
    لو حصل أي خطأ في الاتصال بـ Firebase (النت واقع، أو إعدادات غلط)، الموقع
    الرئيسي هيفضل شغال عادي بالأسعار الأساسية المكتوبة في data.js، مش هيتعطل.
@@ -16,6 +18,9 @@ import {
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getStorage, ref as storageRef, uploadBytes, getDownloadURL,
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCEjY5In6nVtbZa-QlMfBsrfSDteWplXnk",
@@ -30,6 +35,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 /* --------------------------------- المنتجات -------------------------------- */
 
@@ -63,6 +69,10 @@ async function addOrder(order) {
   return addDoc(collection(db, "orders"), { ...order, createdAt: serverTimestamp() });
 }
 
+async function updateOrder(id, data) {
+  return updateDoc(doc(db, "orders", id), data);
+}
+
 async function fetchOrders() {
   const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
@@ -90,6 +100,37 @@ async function fetchVisitCount() {
   return snap.exists() ? snap.data().count || 0 : 0;
 }
 
+/* --------------------------------- عروض اليوم ------------------------------- */
+
+async function fetchDeals() {
+  const snap = await getDocs(collection(db, "deals"));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+async function addDeal(data) {
+  return addDoc(collection(db, "deals"), { ...data, createdAt: serverTimestamp() });
+}
+
+async function updateDeal(id, data) {
+  return updateDoc(doc(db, "deals", id), data);
+}
+
+async function deleteDeal(id) {
+  return deleteDoc(doc(db, "deals", id));
+}
+
+/* ------------------------------- رفع صورة (Storage) ------------------------- */
+// محتاج خطة Blaze (pay-as-you-go) مفعّلة على مشروع Firebase عشان الرفع يشتغل.
+// لو مش مفعّلة، الدالة هترمي خطأ واضح ولوحة التحكم هتوريه للمستخدم.
+
+async function uploadImage(file, folder = "uploads") {
+  const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+  const path = `${folder}/${Date.now()}_${cleanName}`;
+  const ref = storageRef(storage, path);
+  await uploadBytes(ref, file);
+  return getDownloadURL(ref);
+}
+
 /* -------------------------------- تسجيل الدخول ------------------------------ */
 
 function login(email, password) {
@@ -111,9 +152,15 @@ window.Farahat = {
   deleteProduct,
   seedProducts,
   addOrder,
+  updateOrder,
   fetchOrders,
   incrementVisit,
   fetchVisitCount,
+  fetchDeals,
+  addDeal,
+  updateDeal,
+  deleteDeal,
+  uploadImage,
   login,
   logout,
   watchAuth,

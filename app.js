@@ -16,6 +16,7 @@ const els = {
   confirmBtn: document.getElementById("confirmBtn"),
   toast: document.getElementById("toast"),
   custName: document.getElementById("custName"),
+  custPhone: document.getElementById("custPhone"),
   custAddress: document.getElementById("custAddress"),
   custNote: document.getElementById("custNote"),
   custRegion: document.getElementById("custRegion"),
@@ -34,6 +35,11 @@ const els = {
   searchInput: document.getElementById("searchInput"),
   searchCloseBtn: document.getElementById("searchCloseBtn"),
   searchResults: document.getElementById("searchResults"),
+  menuToggleBtn: document.getElementById("menuToggleBtn"),
+  sectionsMenuOverlay: document.getElementById("sectionsMenuOverlay"),
+  sectionsMenuCloseBtn: document.getElementById("sectionsMenuCloseBtn"),
+  sectionsMenuList: document.getElementById("sectionsMenuList"),
+  toTopFab: document.getElementById("toTopFab"),
 };
 
 const money = (n) => n.toLocaleString("ar-EG");
@@ -108,7 +114,7 @@ function buildSections() {
     // نفس الشيء في الناف بار وشريط الأقسام
     const navLink = document.createElement("a");
     navLink.href = `#${section.id}`;
-    navLink.textContent = section.title;
+    navLink.innerHTML = `<span class="nav-icon">${section.icon}</span>${section.title}`;
     els.nav.appendChild(navLink);
 
     const chip = document.createElement("a");
@@ -227,7 +233,7 @@ function buildCard(section, item) {
   }
 
   if (section.hasWeights) {
-    const hasGrind = Array.isArray(section.grindOptions) && section.grindOptions.length > 1;
+    const hasGrind = Array.isArray(section.grindOptions) && section.grindOptions.length > 1 && !item.noGrind;
     card.innerHTML = `
       ${media}
       <div class="card-body">
@@ -288,7 +294,7 @@ function openBoxBuilder(section, item) {
   els.boxRangeText.textContent = `من ${item.minWeight} لحد ${item.maxWeight} ${unitLabel}`;
 
   els.boxItems.innerHTML = "";
-  tab.items.forEach((wItem) => {
+  tab.items.filter((wItem) => !wItem.excludeFromBox).forEach((wItem) => {
     const row = document.createElement("div");
     row.className = "box-builder-row";
     row.dataset.name = wItem.name;
@@ -441,6 +447,99 @@ function setupNavScrollHint() {
   refresh();
 }
 
+/* ------------------------------ منيو "أقسام فرحات" -------------------------- */
+// بتظهر بدل شريط الأقسام على شاشات الموبايل الضيقة. كل قسم فيه تبويبات
+// (زي المزاج والشكولاتة) بيتفتح بضغطة عشان يوري التبويبات اللي جواه، وأي
+// قسم من غير تبويبات بيودّي على طول لمكانه في الصفحة.
+
+function buildSectionsMenu() {
+  if (!els.sectionsMenuList) return;
+  els.sectionsMenuList.innerHTML = "";
+
+  STORE.sections.forEach((section) => {
+    const item = document.createElement("div");
+    item.className = "smi-item";
+
+    if (section.tabs && section.tabs.length > 0) {
+      item.innerHTML = `
+        <button type="button" class="smi-row" data-toggle>
+          <span class="smi-icon">${section.icon}</span>
+          <span class="smi-title">${section.title}</span>
+          <svg class="smi-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="smi-sub">
+          <div class="smi-sub-inner">
+            ${section.tabs.map((tab) => `
+              <button type="button" class="smi-subitem" data-section="${section.id}" data-tab="${tab.id}">
+                <span>${tab.icon}</span>${tab.title}
+              </button>
+            `).join("")}
+          </div>
+        </div>
+      `;
+      item.querySelector(".smi-row").addEventListener("click", () => {
+        item.classList.toggle("open");
+      });
+      item.querySelectorAll(".smi-subitem").forEach((btn) => {
+        btn.addEventListener("click", () => goToMenuTarget(btn.dataset.section, btn.dataset.tab));
+      });
+    } else {
+      item.innerHTML = `
+        <button type="button" class="smi-row" data-section="${section.id}">
+          <span class="smi-icon">${section.icon}</span>
+          <span class="smi-title">${section.title}</span>
+        </button>
+      `;
+      item.querySelector(".smi-row").addEventListener("click", () => goToMenuTarget(section.id, null));
+    }
+
+    els.sectionsMenuList.appendChild(item);
+  });
+}
+
+function goToMenuTarget(sectionId, tabId) {
+  closeSectionsMenu();
+  if (tabId) {
+    const tabBtn = document.querySelector(`.mood-tab[data-tab="${cssEscape(tabId)}"]`);
+    if (tabBtn) tabBtn.click();
+  }
+  requestAnimationFrame(() => {
+    const target = document.getElementById(sectionId);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+
+function openSectionsMenu() {
+  els.sectionsMenuOverlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeSectionsMenu() {
+  els.sectionsMenuOverlay.classList.remove("open");
+  document.body.style.overflow = "";
+}
+
+els.menuToggleBtn.addEventListener("click", openSectionsMenu);
+els.sectionsMenuCloseBtn.addEventListener("click", closeSectionsMenu);
+els.sectionsMenuOverlay.addEventListener("click", (e) => {
+  if (e.target === els.sectionsMenuOverlay) closeSectionsMenu();
+});
+
+/* ------------------------------ زرار "لأول الصفحة" -------------------------- */
+
+function setupToTopButton() {
+  const btn = els.toTopFab;
+  if (!btn) return;
+  window.addEventListener("scroll", () => {
+    btn.classList.toggle("visible", window.scrollY > 600);
+  });
+  btn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+}
+
+document.getElementById("logoHomeLink")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+});
+
 /* --------------------------------- البحث ---------------------------------- */
 
 const tabParentSectionId = {}; // tabId -> id السكشن الأساسي (عشان نعرف نسكرول لفين)
@@ -529,7 +628,18 @@ function goToSearchResult(entry) {
       card.scrollIntoView({ behavior: "smooth", block: "center" });
       setTimeout(() => {
         card.classList.add("search-highlight");
-        setTimeout(() => card.classList.remove("search-highlight"), 2300);
+        const media = card.querySelector(".card-media");
+        let tag = null;
+        if (media) {
+          tag = document.createElement("span");
+          tag.className = "search-found-tag";
+          tag.textContent = "🔍 ده اللي دورت عليه";
+          media.appendChild(tag);
+        }
+        setTimeout(() => {
+          card.classList.remove("search-highlight");
+          if (tag) tag.remove();
+        }, 2400);
       }, 380);
     } else {
       const topId = tabParentSectionId[entry.sectionId] || entry.sectionId;
@@ -572,6 +682,7 @@ const grindSelection = {};
 
 function currentGrind(section, item) {
   if (!Array.isArray(section.grindOptions) || section.grindOptions.length === 0) return null;
+  if (item.noGrind) return null;
   const key = `${section.id}|${item.name}`;
   const savedKey = grindSelection[key];
   return section.grindOptions.find((g) => g.key === savedKey) || section.grindOptions[0];
@@ -829,7 +940,8 @@ els.overlay.addEventListener("click", (e) => { if (e.target === els.overlay) clo
 document.getElementById("cartCloseBtn").addEventListener("click", closeCart);
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  if (els.searchOverlay.classList.contains("open")) closeSearch();
+  if (els.sectionsMenuOverlay.classList.contains("open")) closeSectionsMenu();
+  else if (els.searchOverlay.classList.contains("open")) closeSearch();
   else if (els.boxOverlay.classList.contains("open")) closeBoxBuilder();
   else closeCart();
 });
@@ -896,13 +1008,15 @@ function buildOrderMessage() {
   msg += `*الإجمالي: ${money(cartTotalValue())} ج.م*\n`;
 
   const name = els.custName.value.trim();
+  const phone = els.custPhone.value.trim();
   const address = els.custAddress.value.trim();
   const note = els.custNote.value.trim();
   const region = els.custRegion.value;
 
-  if (name || address || note) {
+  if (name || phone || address || note) {
     msg += `\n------------------\n`;
     if (name) msg += `👤 الاسم: ${name}\n`;
+    if (phone) msg += `📱 الموبايل: ${phone}\n`;
     if (address) msg += `📍 العنوان: ${address}\n`;
     if (note) msg += `📝 ملاحظات: ${note}\n`;
   }
@@ -943,9 +1057,11 @@ function logOrderToFirestore() {
       items,
       total: cartTotalValue(),
       customerName: els.custName.value.trim(),
+      customerPhone: els.custPhone.value.trim(),
       address: els.custAddress.value.trim(),
       note: els.custNote.value.trim(),
       region: els.custRegion.value,
+      status: "pending",
     })
     .catch((e) => console.warn("Farahat: تعذّر تسجيل الطلب في لوحة التحكم.", e));
 }
@@ -953,8 +1069,10 @@ function logOrderToFirestore() {
 function validateCustomerFields() {
   let ok = true;
   const nameEl = els.custName;
+  const phoneEl = els.custPhone;
   const addrEl = els.custAddress;
   const nameErr = document.getElementById("nameError");
+  const phoneErr = document.getElementById("phoneError");
   const addrErr = document.getElementById("addressError");
 
   if (!nameEl.value.trim()) {
@@ -964,6 +1082,17 @@ function validateCustomerFields() {
   } else {
     nameEl.classList.remove("invalid");
     nameErr.classList.remove("visible");
+  }
+
+  // رقم موبايل مصري: يبدأ بـ 01 وطوله 11 رقم (أرقام بس، تسمح بمسافات/شرط بينهم)
+  const phoneDigits = phoneEl.value.replace(/[^0-9]/g, "");
+  if (!/^01[0-9]{9}$/.test(phoneDigits)) {
+    phoneEl.classList.add("invalid");
+    phoneErr.classList.add("visible");
+    ok = false;
+  } else {
+    phoneEl.classList.remove("invalid");
+    phoneErr.classList.remove("visible");
   }
 
   if (!addrEl.value.trim()) {
@@ -978,16 +1107,16 @@ function validateCustomerFields() {
   if (!ok) {
     const firstInvalid = document.querySelector(".cart-form .invalid");
     if (firstInvalid) firstInvalid.focus();
-    showToast("من فضلك اكتب اسمك وعنوانك قبل تأكيد الطلب");
+    showToast("من فضلك اكتب اسمك ورقم موبايلك وعنوانك قبل تأكيد الطلب");
   }
   return ok;
 }
 
-[els.custName, els.custAddress].forEach((input) => {
+[els.custName, els.custPhone, els.custAddress].forEach((input) => {
   input.addEventListener("input", () => {
     if (input.value.trim()) {
       input.classList.remove("invalid");
-      const errId = input === els.custName ? "nameError" : "addressError";
+      const errId = input === els.custName ? "nameError" : input === els.custPhone ? "phoneError" : "addressError";
       document.getElementById(errId).classList.remove("visible");
     }
   });
@@ -1048,6 +1177,7 @@ function setupScrollReveal() {
 
 document.getElementById("brandName").textContent = STORE.name;
 document.getElementById("heroWhatsappLink").href = `https://wa.me/${STORE.whatsapp}`;
+document.getElementById("footerWhatsappLink").href = `https://wa.me/${STORE.whatsapp}`;
 document.getElementById("facebookLink").href = STORE.facebook;
 document.getElementById("instagramLink").href = STORE.instagram;
 document.getElementById("heroLocationLink").href = STORE.mapsUrl;
@@ -1057,10 +1187,12 @@ document.querySelectorAll(".js-phone-link").forEach((el) => (el.href = `tel:0${S
 document.querySelectorAll(".js-address").forEach((el) => (el.textContent = STORE.address));
 
 buildSections();
+buildSectionsMenu();
 searchIndex = buildSearchIndex();
 setupScrollSpy();
 setupScrollReveal();
 setupNavScrollHint();
+setupToTopButton();
 refreshCartUI();
 setupDeliveryRegion();
 restoreCustomerInfo();
@@ -1069,13 +1201,14 @@ requestAnimationFrame(() => {
   setTimeout(() => document.querySelector(".hero-content").classList.add("in-view"), 80);
 });
 
-// حفظ بسيط لبيانات العميل بمتصفحه (اسم/عنوان/منطقة) عشان مايكتبهاش كل مرة
+// حفظ بسيط لبيانات العميل بمتصفحه (اسم/موبايل/عنوان/منطقة) عشان مايكتبهاش كل مرة
 function saveCustomerInfo() {
   try {
     localStorage.setItem(
       "farahat_customer",
       JSON.stringify({
         name: els.custName.value,
+        phone: els.custPhone.value,
         address: els.custAddress.value,
         region: els.custRegion.value,
       })
@@ -1087,13 +1220,14 @@ function restoreCustomerInfo() {
   try {
     const saved = JSON.parse(localStorage.getItem("farahat_customer") || "{}");
     if (saved.name) els.custName.value = saved.name;
+    if (saved.phone) els.custPhone.value = saved.phone;
     if (saved.address) els.custAddress.value = saved.address;
     if (saved.region) {
       els.custRegion.value = saved.region;
       updateDeliveryHint();
     }
   } catch (e) { /* تجاهل لو المتصفح مايدعمش */ }
-  [els.custName, els.custAddress].forEach((input) =>
+  [els.custName, els.custPhone, els.custAddress].forEach((input) =>
     input.addEventListener("change", saveCustomerInfo)
   );
 }
@@ -1124,6 +1258,7 @@ function mergeLiveProducts(products) {
   products.forEach((p) => {
     const key = `${p.sectionId}::${p.tabId || ""}`;
     if (!bySectionTab[key]) bySectionTab[key] = [];
+    if (p.active === false) return; // صنف مخفي من لوحة التحكم — يتسجل مكانه بس مايتعرضش
     bySectionTab[key].push(p);
   });
 
@@ -1148,6 +1283,102 @@ function mergeLiveProducts(products) {
   return changed;
 }
 
+/* -------------------------------- عروض اليوم ------------------------------- */
+
+let activeDeals = [];
+let dealsCountdownTimer = null;
+
+function computeDealFinalPrice(deal) {
+  return Math.round((deal.originalPrice || 0) * (1 - (deal.discountPercent || 0) / 100));
+}
+
+function dealEndsAtDate(deal) {
+  if (deal.endsAt && typeof deal.endsAt.toDate === "function") return deal.endsAt.toDate();
+  return new Date(deal.endsAt);
+}
+
+function loadDeals() {
+  if (!window.Farahat || !window.Farahat.fetchDeals) return;
+  window.Farahat.fetchDeals()
+    .then((list) => {
+      const now = Date.now();
+      activeDeals = list.filter((d) => d.active !== false && dealEndsAtDate(d).getTime() > now);
+      renderDeals();
+      if (activeDeals.length > 0) startDealsCountdownLoop();
+    })
+    .catch((e) => console.warn("Farahat: تعذّر تحميل عروض اليوم.", e));
+}
+
+function renderDeals() {
+  const grid = document.getElementById("dealsGrid");
+  const empty = document.getElementById("dealsEmpty");
+  const countEl = document.getElementById("dealsCount");
+  if (!grid || !empty) return;
+
+  if (activeDeals.length === 0) {
+    grid.hidden = true;
+    grid.innerHTML = "";
+    empty.hidden = false;
+    if (countEl) countEl.textContent = "";
+    return;
+  }
+
+  empty.hidden = true;
+  grid.hidden = false;
+  if (countEl) countEl.textContent = `${activeDeals.length} عرض`;
+
+  grid.innerHTML = activeDeals.map((deal, i) => {
+    const finalPrice = computeDealFinalPrice(deal);
+    return `
+      <div class="deal-card">
+        <div class="deal-media">
+          ${deal.img ? `<img src="${deal.img}" alt="${deal.name}">` : ""}
+          <span class="deal-discount-badge">خصم ${money(deal.discountPercent)}%</span>
+        </div>
+        <div class="deal-body">
+          <h3>${deal.name}</h3>
+          <div class="deal-price-row">
+            <span class="deal-original">${money(deal.originalPrice)} ج.م</span>
+            <span class="deal-now">${money(finalPrice)} ج.م</span>
+          </div>
+          <div class="deal-timer" data-ends="${dealEndsAtDate(deal).getTime()}" data-index="${i}">
+            <div class="dt-seg"><b class="dt-h">00</b><span>ساعة</span></div>
+            <div class="dt-seg"><b class="dt-m">00</b><span>دقيقة</span></div>
+            <div class="dt-seg"><b class="dt-s">00</b><span>ثانية</span></div>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+function startDealsCountdownLoop() {
+  clearInterval(dealsCountdownTimer);
+  dealsCountdownTimer = setInterval(() => {
+    const grid = document.getElementById("dealsGrid");
+    if (!grid) { clearInterval(dealsCountdownTimer); return; }
+    let anyExpired = false;
+    grid.querySelectorAll(".deal-timer").forEach((timerEl) => {
+      const endsAt = Number(timerEl.dataset.ends);
+      const diff = endsAt - Date.now();
+      if (diff <= 0) { anyExpired = true; return; }
+      const pad = (n) => String(n).padStart(2, "0");
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      timerEl.querySelector(".dt-h").textContent = pad(h);
+      timerEl.querySelector(".dt-m").textContent = pad(m);
+      timerEl.querySelector(".dt-s").textContent = pad(s);
+    });
+    if (anyExpired) {
+      const now = Date.now();
+      activeDeals = activeDeals.filter((d) => dealEndsAtDate(d).getTime() > now);
+      renderDeals();
+      if (activeDeals.length === 0) clearInterval(dealsCountdownTimer);
+    }
+  }, 1000);
+}
+
 window.addEventListener("farahat-products-ready", (e) => {
   const changed = mergeLiveProducts(e.detail);
   if (!changed) return;
@@ -1164,11 +1395,13 @@ if (window.Farahat) {
     .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
     .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
   window.Farahat.incrementVisit();
+  loadDeals();
 } else {
   window.addEventListener("farahat-firebase-ready", () => {
     window.Farahat.fetchProducts()
       .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
       .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
     window.Farahat.incrementVisit();
+    loadDeals();
   });
 }

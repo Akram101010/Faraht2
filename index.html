@@ -41,11 +41,17 @@
 <header class="site-header">
   <div class="container">
     <div class="brand">
-      <img src="images/logo_horizontal.png" alt="فرحات - عالم من الجودة">
+      <a href="#" id="logoHomeLink" class="brand-logo-link" aria-label="فرحات - ارجع لأول الصفحة">
+        <img src="images/logo_horizontal.png" alt="فرحات - عالم من الجودة">
+      </a>
       <a class="call-btn js-phone-link" href="tel:" aria-label="اتصل بالمحل">
         📞 <span class="label js-phone-display">...</span>
       </a>
     </div>
+    <button type="button" class="menu-toggle-btn" id="menuToggleBtn" aria-label="أقسام فرحات">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+      <span>أقسام فرحات</span>
+    </button>
     <div class="nav-scroll-wrap">
       <nav class="main-nav" id="mainNav" aria-label="أقسام المنتجات"></nav>
       <button type="button" class="nav-more-btn" id="navMoreBtn" aria-label="فيه أقسام تانية، دوس عشان تشوفها">
@@ -57,6 +63,17 @@
     </button>
   </div>
 </header>
+
+<!-- منيو "أقسام فرحات" (بتظهر بدل شريط الأقسام على الموبايل) -->
+<div class="sections-menu-overlay" id="sectionsMenuOverlay">
+  <div class="sections-menu-panel" role="dialog" aria-label="أقسام فرحات">
+    <div class="sections-menu-header">
+      <h2>🍃 أقسام فرحات</h2>
+      <button type="button" class="sections-menu-close" id="sectionsMenuCloseBtn" aria-label="إغلاق">✕</button>
+    </div>
+    <div class="sections-menu-list" id="sectionsMenuList"></div>
+  </div>
+</div>
 
 <div class="search-overlay" id="searchOverlay">
   <div class="search-panel" role="dialog" aria-label="بحث عن منتج">
@@ -105,6 +122,24 @@
     <div class="container" id="categoryChips"></div>
   </div>
 
+  <section class="deals-section" id="deals">
+    <div class="container">
+      <div class="section-heading reveal">
+        <span class="icon">🔥</span>
+        <div class="heading-text">
+          <h2>عروض اليوم</h2>
+          <span class="count" id="dealsCount"></span>
+        </div>
+      </div>
+      <div class="deals-grid" id="dealsGrid" hidden></div>
+      <div class="deals-empty" id="dealsEmpty">
+        <span class="icon">⏳</span>
+        <strong>استنّى العرض الجديد!</strong>
+        هنفاجئك بعروض جديدة قريب جدًا، تابعنا وارجع كل يوم
+      </div>
+    </div>
+  </section>
+
   <div id="sections"></div>
 </main>
 
@@ -127,36 +162,41 @@
           </a>
         </div>
       </div>
-      <div class="footer-links">
-        <div class="footer-col">
-          <h5>الأقسام</h5>
-          <a href="#nuts">المكسرات</a>
-          <a href="#mood">المزاج</a>
-          <a href="#honey">العسل</a>
-          <a href="#dates">التمور</a>
+      <div class="footer-col">
+        <h5>الأقسام</h5>
+        <a href="#nuts">المكسرات</a>
+        <a href="#mood">المزاج</a>
+        <a href="#chocolate">الشكولاتة</a>
+        <a href="#honey">العسل</a>
+        <a href="#oils">الزيوت الطبيعية</a>
+        <a href="#snacks">المقرمشات والتسالي</a>
+        <a href="#dates">التمور</a>
+      </div>
+      <div class="footer-col footer-contact-card">
+        <h5>تواصل معانا</h5>
+        <a href="#" class="contact-row js-phone-link" target="_blank">
+          <span class="c-icon">📞</span>
+          <span class="js-phone-display"></span>
+        </a>
+        <div class="contact-row">
+          <span class="c-icon">📍</span>
+          <span class="js-address"></span>
         </div>
-        <div class="footer-col footer-contact-card">
-          <h5>تواصل معانا</h5>
-          <a href="#" class="contact-row js-phone-link" target="_blank">
-            <span class="c-icon">📞</span>
-            <span class="js-phone-display"></span>
-          </a>
-          <div class="contact-row">
-            <span class="c-icon">📍</span>
-            <span class="js-address"></span>
-          </div>
-          <div class="footer-map">
-            <iframe
-              src="https://www.google.com/maps?q=%D9%81%D8%B1%D8%AD%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%86%D8%B2%D9%84%D8%A9%20%D8%B4%D8%A7%D8%B1%D8%B9%20%D8%B9%D9%85%D8%B1%20%D8%A3%D9%81%D9%86%D8%AF%D9%8A%20%D8%A3%D9%85%D8%A7%D9%85%20%D9%85%D8%B3%D8%AC%D8%AF%20%D8%B4%D9%84%D8%A8%D8%A7%D9%8A%D8%A9&output=embed"
-              loading="lazy"
-              referrerpolicy="no-referrer-when-downgrade"
-              aria-label="خريطة موقع محل فرحات"></iframe>
-          </div>
-          <a href="#" id="footerMapsLink" class="directions-btn" target="_blank" rel="noopener">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
-            احصل على الاتجاهات
-          </a>
+        <a href="#" id="footerWhatsappLink" class="btn btn-whatsapp footer-wa-btn" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2 22l5.29-1.39a9.9 9.9 0 0 0 4.75 1.21h.01c5.46 0 9.9-4.45 9.9-9.91C22 6.45 17.5 2 12.04 2Zm5.8 14.16c-.24.68-1.4 1.3-1.93 1.36-.5.06-1.02.3-3.42-.71-2.9-1.23-4.76-4.2-4.9-4.4-.14-.19-1.17-1.56-1.17-2.97s.73-2.1 1-2.39c.24-.26.53-.33.71-.33.18 0 .35 0 .5.01.17.01.38-.06.6.46.24.58.8 2 .87 2.14.07.14.12.31.02.5-.1.19-.15.31-.3.48-.15.17-.31.38-.44.5-.15.14-.3.3-.13.58.17.29.76 1.25 1.63 2.02 1.12 1 2.06 1.31 2.35 1.46.29.14.46.12.63-.07.17-.19.72-.84.92-1.13.19-.29.38-.24.63-.14.26.1 1.65.78 1.93.92.29.14.48.22.55.34.07.13.07.72-.17 1.4Z"/></svg>
+          راسلنا على واتساب
+        </a>
+        <div class="footer-map">
+          <iframe
+            src="https://www.google.com/maps?q=%D9%81%D8%B1%D8%AD%D8%A7%D8%AA%20%D8%A7%D9%84%D9%85%D9%86%D8%B2%D9%84%D8%A9%20%D8%B4%D8%A7%D8%B1%D8%B9%20%D8%B9%D9%85%D8%B1%20%D8%A3%D9%81%D9%86%D8%AF%D9%8A%20%D8%A3%D9%85%D8%A7%D9%85%20%D9%85%D8%B3%D8%AC%D8%AF%20%D8%B4%D9%84%D8%A8%D8%A7%D9%8A%D8%A9&output=embed"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade"
+            aria-label="خريطة موقع محل فرحات"></iframe>
         </div>
+        <a href="#" id="footerMapsLink" class="directions-btn" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 20l-5.447-2.724A1 1 0 0 1 3 16.382V5.618a1 1 0 0 1 1.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0 0 21 18.382V7.618a1 1 0 0 0-.553-.894L15 4m0 13V4m0 0L9 7"/></svg>
+          احصل على الاتجاهات
+        </a>
       </div>
     </div>
     <div class="footer-bottom">جميع الحقوق محفوظة © فرحات — <span id="brandName">فرحات</span></div>
@@ -168,6 +208,11 @@
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="21" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="21" r="1.4" fill="currentColor" stroke="none"/></svg>
   <span class="badge" id="fabCount">0</span>
   <span class="fab-total" id="fabTotal">0 ج.م</span>
+</button>
+
+<!-- زر الرجوع لأول الصفحة -->
+<button class="to-top-fab" id="toTopFab" type="button" aria-label="ارجع لأول الصفحة">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
 </button>
 
 <!-- سلة الطلب -->
@@ -184,6 +229,10 @@
       <label for="custName">الاسم <span class="req">*</span></label>
       <input type="text" id="custName" placeholder="اسمك" required>
       <span class="field-error" id="nameError">من فضلك اكتب اسمك</span>
+
+      <label for="custPhone">رقم الموبايل <span class="req">*</span></label>
+      <input type="tel" id="custPhone" placeholder="01xxxxxxxxx" inputmode="numeric" required>
+      <span class="field-error" id="phoneError">من فضلك اكتب رقم موبايل صحيح</span>
 
       <label for="custAddress">العنوان / منطقة التوصيل <span class="req">*</span></label>
       <input type="text" id="custAddress" placeholder="مثال: المنزلة - شارع كذا" required>

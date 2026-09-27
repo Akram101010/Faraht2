@@ -51,6 +51,7 @@
   <nav class="dash-tabs">
     <button type="button" class="dash-tab active" data-panel="overview">📊 نظرة عامة</button>
     <button type="button" class="dash-tab" data-panel="products">🛍️ المنتجات</button>
+    <button type="button" class="dash-tab" data-panel="deals">🔥 عروض اليوم</button>
     <button type="button" class="dash-tab" data-panel="orders">🧾 الطلبات</button>
   </nav>
 
@@ -119,6 +120,7 @@
               <th>القسم</th>
               <th>السعر</th>
               <th>الأكثر طلبًا</th>
+              <th>ظاهر؟</th>
               <th></th>
             </tr>
           </thead>
@@ -128,8 +130,39 @@
       </div>
     </section>
 
+    <!-- عروض اليوم -->
+    <section class="dash-panel" id="panel-deals">
+      <div class="panel-toolbar">
+        <button type="button" class="btn-solid" id="addDealBtn">+ إضافة عرض</button>
+      </div>
+      <div class="table-wrap">
+        <table class="dash-table" id="dealsTable">
+          <thead>
+            <tr>
+              <th></th>
+              <th>الاسم</th>
+              <th>السعر الأصلي</th>
+              <th>الخصم</th>
+              <th>السعر بعد الخصم</th>
+              <th>باقي على الانتهاء</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="dealsTbody"></tbody>
+        </table>
+        <p class="empty-hint" id="dealsEmptyHint" hidden>لسه مفيش عروض. دوس "+ إضافة عرض" عشان تضيف أول عرض.</p>
+      </div>
+      <p class="dash-note">
+        العرض بيختفي من الموقع لوحده أول ما وقته يخلص، ومكانه بيظهر للعميل
+        رسالة "استنّى العرض الجديد" لحد ما تضيف عرض تاني.
+      </p>
+    </section>
+
     <!-- الطلبات -->
     <section class="dash-panel" id="panel-orders">
+      <div class="panel-toolbar">
+        <button type="button" class="btn-outline" id="exportOrdersBtn">⬇️ تصدير الطلبات (Excel)</button>
+      </div>
       <div class="table-wrap">
         <table class="dash-table" id="ordersTable">
           <thead>
@@ -138,6 +171,7 @@
               <th>الاسم</th>
               <th>المنطقة</th>
               <th>الإجمالي</th>
+              <th>الحالة</th>
               <th></th>
             </tr>
           </thead>
@@ -185,10 +219,20 @@
         </label>
       </div>
 
+      <label class="checkbox-label">
+        <input type="checkbox" id="pfExcludeFromBox">
+        منيعرضش ضمن اختيارات "علبة هدايا فرحات الخاصة" (بس للأصناف اللي بالوزن)
+      </label>
+
       <label>
         رابط الصورة
         <input type="text" id="pfImg" placeholder="images/nuts/example.jpg">
       </label>
+      <div class="image-upload-row">
+        <input type="file" id="pfImgFile" accept="image/*">
+        <button type="button" class="btn-outline" id="pfImgUploadBtn">⬆️ رفع صورة من الجهاز</button>
+        <span class="upload-status" id="pfImgUploadStatus"></span>
+      </div>
 
       <label class="checkbox-label">
         <input type="checkbox" id="pfCustomBox">
@@ -224,6 +268,64 @@
 
       <div class="modal-footer">
         <button type="button" class="btn-outline" id="productDeleteBtn" hidden>حذف المنتج</button>
+        <button type="submit" class="btn-solid">حفظ</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- بوب-أب إضافة/تعديل عرض -->
+<div class="modal-overlay" id="dealModalOverlay">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h2 id="dealModalTitle">إضافة عرض</h2>
+      <button type="button" class="modal-close" id="dealModalClose">✕</button>
+    </div>
+    <form id="dealForm" class="modal-form">
+      <label>
+        اختار من منتج موجود (اختياري، بيعبّي الاسم والصورة تلقائي)
+        <select id="dfSourceProduct">
+          <option value="">— اكتب بيانات العرض يدويًا —</option>
+        </select>
+      </label>
+
+      <label>
+        اسم العرض *
+        <input type="text" id="dfName" required>
+      </label>
+
+      <label>
+        رابط الصورة
+        <input type="text" id="dfImg" placeholder="images/...">
+      </label>
+      <div class="image-upload-row">
+        <input type="file" id="dfImgFile" accept="image/*">
+        <button type="button" class="btn-outline" id="dfImgUploadBtn">⬆️ رفع صورة من الجهاز</button>
+        <span class="upload-status" id="dfImgUploadStatus"></span>
+      </div>
+
+      <div class="form-row">
+        <label>
+          السعر الأصلي (بالجنيه) *
+          <input type="number" id="dfOriginalPrice" min="0" step="1" required>
+        </label>
+        <label>
+          نسبة الخصم % *
+          <input type="number" id="dfDiscountPercent" min="1" max="90" step="1" required>
+        </label>
+      </div>
+
+      <p class="computed-price-hint">السعر بعد الخصم: <strong id="dfComputedPrice">—</strong></p>
+
+      <label>
+        العرض ينتهي في *
+        <input type="datetime-local" id="dfEndsAt" required>
+      </label>
+
+      <p class="form-error" id="dealFormError"></p>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-outline" id="dealDeleteBtn" hidden>حذف العرض</button>
         <button type="submit" class="btn-solid">حفظ</button>
       </div>
     </form>
