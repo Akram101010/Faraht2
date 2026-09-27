@@ -103,6 +103,15 @@ let booted = false;
 
 const money = (n) => Number(n || 0).toLocaleString("ar-EG");
 
+// مسارات الصور في القاعدة متخزنة نسبةً لجذر الموقع (زي "images/nuts/x.jpg")
+// لأن الموقع الرئيسي هو اللي بيستخدمها، لكن صفحة الداشبورد نفسها جوه
+// فولدر admin/ (خطوة أعمق)، فلازم نضيف "../" قبلها عشان الصورة تظهر هنا.
+function resolveImgSrc(path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path) || path.startsWith("../") || path.startsWith("/") || path.startsWith("data:")) return path;
+  return "../" + path;
+}
+
 function showToast(msg) {
   els.toast.textContent = msg;
   els.toast.classList.add("visible");
@@ -270,7 +279,7 @@ function renderProductsTable(filter = "") {
   els.productsEmptyHint.hidden = products.length > 0;
 
   els.productsTbody.innerHTML = list.map((p) => {
-    const thumb = p.img ? `<img class="row-thumb" src="${p.img}" alt="">` : `<div class="row-thumb"></div>`;
+    const thumb = p.img ? `<img class="row-thumb" src="${resolveImgSrc(p.img)}" alt="">` : `<div class="row-thumb"></div>`;
     const sectionLabel = p.tabId ? `${sectionTitle(p.sectionId)} › ${tabTitle(p.sectionId, p.tabId)}` : sectionTitle(p.sectionId);
     const priceLabel = typeof p.price === "number" ? `${money(p.price)} ج.م` : "—";
     const isActive = p.active !== false;
@@ -575,7 +584,7 @@ function dealEndsAtDate(deal) {
 function renderDealsTable() {
   els.dealsEmptyHint.hidden = deals.length > 0;
   els.dealsTbody.innerHTML = deals.map((d) => {
-    const thumb = d.img ? `<img class="row-thumb" src="${d.img}" alt="">` : `<div class="row-thumb"></div>`;
+    const thumb = d.img ? `<img class="row-thumb" src="${resolveImgSrc(d.img)}" alt="">` : `<div class="row-thumb"></div>`;
     const endsAtDate = dealEndsAtDate(d);
     const expired = endsAtDate.getTime() <= Date.now();
     const finalPrice = Math.round((d.originalPrice || 0) * (1 - (d.discountPercent || 0) / 100));
