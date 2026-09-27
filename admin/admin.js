@@ -200,7 +200,14 @@ async function loadProducts() {
     console.error(e);
     products = [];
   }
-  els.seedBtn.hidden = products.length > 0;
+  updateSeedBtnLabel();
+}
+
+function updateSeedBtnLabel() {
+  els.seedBtn.hidden = false;
+  els.seedBtn.textContent = products.length > 0
+    ? "🔄 تحديث الكتالوج بالكامل من أحدث نسخة بالموقع"
+    : "⬇️ تعبئة المنتجات الأساسية أول مرة";
 }
 
 async function loadOrders() {
@@ -442,11 +449,23 @@ els.productDeleteBtn.addEventListener("click", async () => {
 
 els.seedBtn.addEventListener("click", async () => {
   if (!window.STORE) { showToast("data.js مش متحمّل"); return; }
-  if (!confirm("هيتضاف كل المنتجات الأساسية من data.js لقاعدة البيانات، تحب تكمل؟")) return;
+
+  const isResync = products.length > 0;
+  const confirmMsg = isResync
+    ? "الإجراء ده هيمسح كل المنتجات الحالية في قاعدة البيانات (بما فيها أي سعر أو تعديل عملته يدويًا من هنا) ويستبدلها بأحدث نسخة من كود الموقع. الطلبات والعروض مش هيتأثروا. متأكد إنك عايز تكمل؟"
+    : "هيتضاف كل المنتجات الأساسية من data.js لقاعدة البيانات، تحب تكمل؟";
+  if (!confirm(confirmMsg)) return;
 
   els.seedBtn.disabled = true;
-  els.seedBtn.textContent = "بيتعبّى...";
+
   try {
+    if (isResync) {
+      els.seedBtn.textContent = "بيمسح القديم...";
+      for (const p of products) {
+        await F.deleteProduct(p.id);
+      }
+    }
+    els.seedBtn.textContent = "بيتعبّى...";
     const list = flattenStoreToProducts(window.STORE);
     await F.seedProducts(list);
     showToast(`✓ اتضاف ${list.length} صنف`);
@@ -455,10 +474,10 @@ els.seedBtn.addEventListener("click", async () => {
     renderOverview();
   } catch (err) {
     console.error(err);
-    showToast("حصل خطأ في التعبئة");
+    showToast("حصل خطأ أثناء التحديث");
   } finally {
     els.seedBtn.disabled = false;
-    els.seedBtn.textContent = "⬇️ تعبئة المنتجات الأساسية أول مرة";
+    updateSeedBtnLabel();
   }
 });
 
