@@ -2488,3 +2488,115 @@ html[data-theme="dark"] .brand-logo-link::before { background: radial-gradient(c
 @media (max-width: 720px) {
   .brand img { height: 36px; }
 }
+
+/* ==========================================================================
+   عرض الكل / تراجع ✕ / نفد مؤقتًا
+   ========================================================================== */
+
+/* ✕ أحمر صغير للتراجع على أزرار الأوزان */
+.wb-undo {
+  position: absolute;
+  top: -7px;
+  left: -6px;
+  z-index: 2;
+  width: 19px;
+  height: 19px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #d32f2f;
+  color: #fff;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 3px 8px -2px rgba(160, 20, 20, 0.7);
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.wb-undo::after { content: ""; position: absolute; inset: -9px; } /* مساحة ضغط أكبر من الشكل */
+.wb-undo:hover { transform: scale(1.18); background: #b71c1c; }
+.qty-row .qty-remove { color: #d32f2f; font-weight: 900; }
+.qty-row .qty-remove:hover { background: rgba(211, 47, 47, 0.12); }
+
+/* عرض الكل / سحب أفقي (موبايل) */
+.gs-toggle {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1.5px solid var(--olive);
+  background: transparent;
+  color: var(--forest-ink);
+  font-weight: 800;
+  font-size: 0.86rem;
+  transition: background 0.18s ease, transform 0.12s ease;
+}
+.gs-toggle:hover { background: var(--cream-2); }
+.gs-toggle:active { transform: scale(0.98); }
+.gs-swipe { display: flex; align-items: center; gap: 10px; }
+.gs-swipe[hidden] { display: none; }
+@media (max-width: 720px) {
+  .gs-controls:not([hidden]) { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin: 4px 0 12px; }
+  #sections .grid.grid-expanded {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    overflow: visible;
+    scroll-snap-type: none;
+    padding-bottom: 4px;
+  }
+}
+
+/* نفد مؤقتًا */
+.card-soldout { border-style: dashed; }
+.card-soldout .card-media img { filter: grayscale(0.9) brightness(0.92); }
+.card-soldout .card-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(250, 246, 236, 0.5);
+}
+html[data-theme="dark"] .card-soldout .card-media::after { background: rgba(10, 14, 8, 0.5); }
+.badge-soldout {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%) rotate(-7deg);
+  background: rgba(28, 30, 24, 0.9);
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.9rem;
+  padding: 8px 18px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  box-shadow: 0 10px 22px -6px rgba(0, 0, 0, 0.55);
+}
+.card-price.muted { color: var(--ink-soft); }
+.soldout-note {
+  margin-top: auto;
+  text-align: center;
+  padding: 9px 10px;
+  border-radius: 10px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--cream-2);
+  border: 1px dashed var(--line);
+}
+.soldout-note strong { color: var(--gold-ink); }
+.soldout-ask {
+  display: block;
+  text-align: center;
+  padding: 9px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--forest-ink);
+  border: 1.5px solid var(--olive);
+  transition: background 0.18s ease;
+}
+.soldout-ask:hover { background: var(--cream-2); }
+.sr-price.soldout { color: var(--ink-soft); font-weight: 700; }

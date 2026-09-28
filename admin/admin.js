@@ -31,6 +31,13 @@ const els = {
 
   addProductBtn: document.getElementById("addProductBtn"),
   seedBtn: document.getElementById("seedBtn"),
+  unorderedPeriod: document.getElementById("unorderedPeriod"),
+  unorderedSummary: document.getElementById("unorderedSummary"),
+  unorderedList: document.getElementById("unorderedList"),
+  orderFilters: document.getElementById("orderFilters"),
+  ofAll: document.getElementById("ofAll"),
+  ofPending: document.getElementById("ofPending"),
+  ofDone: document.getElementById("ofDone"),
   productSearch: document.getElementById("productSearch"),
   productsTbody: document.getElementById("productsTbody"),
   productsEmptyHint: document.getElementById("productsEmptyHint"),
@@ -96,6 +103,7 @@ let orders = [];
 let deals = [];
 let editingProductId = null;
 let editingDealId = null;
+let orderFilter = "all";
 let dealSource = null; // { sectionId, tabId, name } لو العرض مربوط بمنتج موجود
 let toastTimer = null;
 let booted = false;
@@ -255,9 +263,67 @@ function renderOverview() {
 
   const recent = orders.slice(0, 5);
   els.recentOrdersList.innerHTML = recent.length
-    ? recent.map((o) => `<div class="row"><span class="name">${o.customerName || "بدون اسم"}</span><span class="meta">${money(o.total)} ج.م</span></div>`).join("")
+    ? recent.map((o) => `<div class="row"><span class="name"><i class="status-dot status-${o.status || "pending"}"></i>${o.customerName || "بدون اسم"}</span><span class="meta">${money(o.total)} ج.م</span></div>`).join("")
     : `<p class="empty-hint">لسه مفيش طلبات مسجّلة.</p>`;
+
+  renderUnordered();
 }
+
+/* --------------------------- أصناف لم تُطلب (إحصائية) ---------------------- */
+// بتقارن أسماء الأصناف الحالية بالأصناف اللي ظهرت في الطلبات المسجّلة في
+// الفترة المختارة. الأصناف اللي عليها اختيار سادة/محوج بتتحسب على اسمها الأصلي.
+
+function orderTimeMs(o) {
+  return o.createdAt && typeof o.createdAt.toDate === "function" ? o.createdAt.toDate().getTime() : 0;
+}
+
+function grindLabelsRegex() {
+  const labels = new Set();
+  (window.STORE ? window.STORE.sections : []).forEach((sec) => {
+    (sec.tabs ? sec.tabs : [sec]).forEach((sub) => (sub.grindOptions || []).forEach((g) => labels.add(g.label)));
+  });
+  if (!labels.size) return null;
+  return new RegExp(`\\s*\\((?:${[...labels].join("|")})\\)\\s*$`);
+}
+
+function renderUnordered() {
+  const days = Number(els.unorderedPeriod.value) || 0;
+  const since = days ? Date.now() - days * 86400000 : 0;
+  const inPeriod = orders.filter((o) => orderTimeMs(o) >= since);
+
+  if (products.length === 0) {
+    els.unorderedSummary.textContent = "";
+    els.unorderedList.innerHTML = `<p class="empty-hint">لسه مفيش منتجات في القاعدة.</p>`;
+    return;
+  }
+  if (inPeriod.length === 0) {
+    els.unorderedSummary.textContent = "";
+    els.unorderedList.innerHTML = `<p class="empty-hint">مفيش طلبات في الفترة دي لسه، فمفيش بيانات تتقارن.</p>`;
+    return;
+  }
+
+  const grindRe = grindLabelsRegex();
+  const ordered = new Set();
+  inPeriod.forEach((o) => (o.items || []).forEach((it) => {
+    ordered.add(it.name);
+    if (grindRe) ordered.add(String(it.name || "").replace(grindRe, "").trim());
+  }));
+
+  const notOrdered = products.filter((p) => p.active !== false && !ordered.has(p.name));
+  const total = products.filter((p) => p.active !== false).length;
+  els.unorderedSummary.innerHTML = notOrdered.length
+    ? `<strong>${money(notOrdered.length)}</strong> صنف من ${money(total)} لم يُطلب في ${money(inPeriod.length)} طلب. ممكن تعمل عليهم عرض من تبويب "🔥 عروض اليوم".`
+    : `🎉 كل الأصناف اتطلبت مرة على الأقل في ${money(inPeriod.length)} طلب.`;
+
+  const order = sectionsMeta().map((s) => s.id);
+  notOrdered.sort((a, b) => order.indexOf(a.sectionId) - order.indexOf(b.sectionId));
+  const chip = (p) => `<span class="chip-item" title="${p.tabId ? tabTitle(p.sectionId, p.tabId) : sectionTitle(p.sectionId)}">${p.name}<small>${p.tabId ? tabTitle(p.sectionId, p.tabId) : sectionTitle(p.sectionId)}</small></span>`;
+  const first = notOrdered.slice(0, 14);
+  const rest = notOrdered.slice(14);
+  els.unorderedList.innerHTML = first.map(chip).join("") +
+    (rest.length ? `<details class="chip-more"><summary>عرض باقي ${money(rest.length)} صنف</summary>${rest.map(chip).join("")}</details>` : "");
+}
+els.unorderedPeriod.addEventListener("change", renderUnordered);
 
 /* ---------------------------------- المنتجات -------------------------------- */
 
@@ -299,6 +365,11 @@ function renderProductsTable(filter = "") {
         <td class="price-cell">${priceLabel}</td>
         <td>${p.bestseller ? `<span class="bs-yes">✓</span>` : `<span class="bs-no">—</span>`}</td>
         <td>
+          <button type="button" class="stock-btn ${p.soldOut ? "is-out" : "is-in"}" title="${p.soldOut ? "دوس عشان يرجع متاح للطلب" : "دوس عشان يظهر للعميل إنه نفد مؤقتًا وهيتوفر قريبًا"}">
+            ${p.soldOut ? "⏳ نفد مؤقتًا" : "📦 متوفر"}
+          </button>
+        </td>
+        <td>
           <button type="button" class="visibility-btn ${isActive ? "is-visible" : "is-hidden"}" title="${isActive ? "دوس عشان تخفيه من الموقع" : "دوس عشان تظهره تاني في الموقع"}">
             ${isActive ? "👁️ ظاهر" : "🚫 مخفي"}
           </button>
@@ -312,6 +383,25 @@ function renderProductsTable(filter = "") {
     btn.addEventListener("click", () => {
       const id = btn.closest("tr").dataset.id;
       openProductModal(products.find((p) => p.id === id));
+    });
+  });
+
+  els.productsTbody.querySelectorAll(".stock-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.closest("tr").dataset.id;
+      const p = products.find((x) => x.id === id);
+      if (!p) return;
+      const newSoldOut = !p.soldOut;
+      btn.disabled = true;
+      try {
+        await F.updateProduct(id, { soldOut: newSoldOut });
+        p.soldOut = newSoldOut;
+        renderProductsTable(els.productSearch.value);
+        showToast(newSoldOut ? "⏳ ظهر للعميل إنه نفد مؤقتًا وهيتوفر قريبًا" : "📦 رجع متاح للطلب");
+      } catch (e) {
+        alert("تعذّر تحديث التوفر، جرب تاني.");
+        btn.disabled = false;
+      }
     });
   });
 
@@ -748,9 +838,27 @@ function normalizePhone(phone) {
   return p;
 }
 
+function updateOrderCounters() {
+  const pending = orders.filter((o) => (o.status || "pending") === "pending").length;
+  els.ofAll.textContent = money(orders.length);
+  els.ofPending.textContent = money(pending);
+  els.ofDone.textContent = money(orders.length - pending);
+  els.orderFilters.querySelectorAll(".of-chip").forEach((c) => c.classList.toggle("active", c.dataset.filter === orderFilter));
+}
+
+els.orderFilters.addEventListener("click", (e) => {
+  const chip = e.target.closest(".of-chip");
+  if (!chip) return;
+  orderFilter = chip.dataset.filter;
+  renderOrdersTable();
+});
+
 function renderOrdersTable() {
-  els.ordersEmptyHint.hidden = orders.length > 0;
-  els.ordersTbody.innerHTML = orders.map((o) => {
+  updateOrderCounters();
+  const shown = orders.filter((o) => orderFilter === "all" || (o.status || "pending") === orderFilter);
+  els.ordersEmptyHint.hidden = shown.length > 0;
+  els.ordersEmptyHint.textContent = orders.length === 0 ? "لسه مفيش طلبات مسجّلة." : "مفيش طلبات في الفلتر ده.";
+  els.ordersTbody.innerHTML = shown.map((o) => {
     const date = o.createdAt && typeof o.createdAt.toDate === "function"
       ? o.createdAt.toDate().toLocaleString("ar-EG")
       : "—";
@@ -760,7 +868,7 @@ function renderOrdersTable() {
       ? `<a class="wa-btn" href="https://wa.me/${normalizePhone(o.customerPhone)}" target="_blank" rel="noopener" title="راسله على واتساب">💬</a>`
       : "";
     return `
-      <tr data-id="${o.id}">
+      <tr data-id="${o.id}" class="order-row order-${status}">
         <td class="date-cell">${date}</td>
         <td>${o.customerName || "—"}</td>
         <td>${regionLabel}</td>
@@ -793,6 +901,10 @@ function renderOrdersTable() {
         const o = orders.find((x) => x.id === id);
         if (o) o.status = newStatus;
         sel.className = `status-select status-${newStatus}`;
+        const tr = sel.closest("tr");
+        if (tr) tr.className = `order-row order-${newStatus}`;
+        renderOverview();
+        renderOrdersTable();
       } catch (e) {
         alert("تعذّر تحديث حالة الطلب، جرب تاني.");
       } finally {

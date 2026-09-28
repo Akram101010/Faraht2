@@ -97,6 +97,19 @@
         </div>
       </div>
 
+      <div class="panel-box unordered-box">
+        <div class="unordered-head">
+          <h3>😴 أصناف لم تُطلب</h3>
+          <select id="unorderedPeriod" class="period-select" aria-label="الفترة">
+            <option value="0">كل الطلبات</option>
+            <option value="30" selected>آخر 30 يوم</option>
+            <option value="7">آخر 7 أيام</option>
+          </select>
+        </div>
+        <p class="unordered-summary" id="unorderedSummary"></p>
+        <div id="unorderedList" class="chip-list"></div>
+      </div>
+
       <p class="dash-note">
         ملحوظة: العدد ده بيسجّل كل مرة حد يفتح فيها الموقع (page views)، مش عدد
         الزوار الفريدين. وعدد الطلبات وإجمالي المبيعات مبنيين على الطلبات اللي
@@ -120,6 +133,7 @@
               <th>القسم</th>
               <th>السعر</th>
               <th>الأكثر طلبًا</th>
+              <th>متوفر؟</th>
               <th>ظاهر؟</th>
               <th></th>
             </tr>
@@ -161,6 +175,11 @@
     <!-- الطلبات -->
     <section class="dash-panel" id="panel-orders">
       <div class="panel-toolbar">
+        <div class="order-filters" id="orderFilters">
+          <button type="button" class="of-chip active" data-filter="all">الكل <b id="ofAll">0</b></button>
+          <button type="button" class="of-chip of-pending" data-filter="pending">🟠 قيد التنفيذ <b id="ofPending">0</b></button>
+          <button type="button" class="of-chip of-done" data-filter="done">🟢 تم التنفيذ <b id="ofDone">0</b></button>
+        </div>
         <button type="button" class="btn-outline" id="exportOrdersBtn">⬇️ تصدير الطلبات (Excel)</button>
       </div>
       <div class="table-wrap">

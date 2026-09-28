@@ -8,6 +8,17 @@ let dealsTicker = null;
 let nextDealExpiry = 0;
 const DEAL_PSEUDO_SECTION = { id: "deals", title: "عروض اليوم", icon: "🔥", unit: "جنيه / قطعة" };
 
+// حفظ السلة: لو العميل عمل ريفريش بالغلط السلة ترجع، وبتتنضّف أسعارها من
+// الكتالوج الحالي أول ما البيانات الحية توصل. بتتمسح بعد 3 أيام، وبعد ما
+// الطلب يتبعت على واتساب مابنحفظهاش تاني (عشان مايتكرّرش طلب بالغلط).
+const CART_STORAGE_KEY = "farahat_cart_v1";
+const CART_MAX_AGE = 3 * 24 * 3600 * 1000;
+let sentCartSig = null;
+let restoredFromStorage = false;
+let cartFinalized = false;
+let productsSettled = false;
+let dealsSettled = false;
+
 const els = {
   sections: document.getElementById("sections"),
   nav: document.getElementById("mainNav"),
@@ -111,7 +122,7 @@ function buildSections() {
     } else {
       const grid = document.createElement("div");
       grid.className = "grid reveal";
-      sortByPrice(section.items).forEach((item) => grid.appendChild(buildCard(section, item)));
+      sortForDisplay(section.items).forEach((item) => grid.appendChild(buildCard(section, item)));
       inner.appendChild(grid);
     }
 
@@ -135,8 +146,14 @@ function buildSections() {
 
 /* --------------------------- قسم بتبويبات (المزاج) ------------------------- */
 
-function sortByPrice(items) {
+// ترتيب العرض: الأكثر طلبًا الأول (عشان أهم أصنافك تبان قبل ما العميل يكسل
+// يسحب)، وبعدها باقي الأصناف من الأرخص للأغلى، والأصناف "النافدة مؤقتًا"
+// في الآخر عشان ماياخدوش مكان من المتاح.
+function sortForDisplay(items) {
+  const rank = (i) => (i.soldOut ? 2 : i.bestseller ? 0 : 1);
   return [...items].sort((a, b) => {
+    const r = rank(a) - rank(b);
+    if (r !== 0) return r;
     const pa = typeof a.price === "number" ? a.price : Infinity;
     const pb = typeof b.price === "number" ? b.price : Infinity;
     return pa - pb;
@@ -180,7 +197,7 @@ function buildTabbedSection(section) {
     } else {
       const grid = document.createElement("div");
       grid.className = "grid";
-      sortByPrice(tab.items).forEach((item) => grid.appendChild(buildCard(tab, item)));
+      sortForDisplay(tab.items).forEach((item) => grid.appendChild(buildCard(tab, item)));
       panel.appendChild(grid);
 
       // تنويه في آخر كل تبويب إن في أنواع تانية في نفس القسم، عشان محدش
@@ -268,17 +285,34 @@ function buildCard(section, item, opts = {}) {
   // كارت الشريحة في سكشن العروض ليه مفتاح بحث مختلف، عشان البحث يوصل
   // لكارت المنتج الأصلي في قسمه مش لنسخة العروض
   card.dataset.searchId = opts.slide ? `deal::${section.id}::${item.name}` : `${section.id}::${item.name}`;
-  const dealOn = hasActiveDeal(item);
+  const soldOut = !!item.soldOut;
+  const dealOn = hasActiveDeal(item) && !soldOut;
   if (dealOn) card.classList.add("card-has-deal");
+  if (soldOut) card.classList.add("card-soldout");
 
   const bestsellerBadge = item.bestseller
     ? `<span class="badge-bestseller"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.8-6.3 3.8 1.7-7L2 9.2l7.1-.6L12 2z"/></svg>الأكثر طلبًا</span>`
     : "";
   const dealBadge = dealOn ? `<span class="badge-deal">🔥 عرض −${money(item.deal.percent)}%</span>` : "";
-  const badges = `${bestsellerBadge}${dealBadge}`;
+  const soldBadge = soldOut ? `<span class="badge-soldout">⏳ نفد مؤقتًا</span>` : "";
+  const badges = soldOut ? soldBadge : `${bestsellerBadge}${dealBadge}`;
   const media = item.img
     ? `<div class="card-media">${badges}<img src="${item.img}" alt="${item.name}" loading="lazy"></div>`
     : `<div class="card-media placeholder">${badges}${section.icon}</div>`;
+
+  if (soldOut) {
+    const ask = encodeURIComponent(`السلام عليكم، عايز أعرف ${item.name} هيتوفر امتى؟`);
+    card.innerHTML = `
+      ${media}
+      <div class="card-body">
+        <h3>${item.name}</h3>
+        ${typeof item.price === "number" ? `<div class="card-price-row"><span class="card-price muted">${money(item.price)} <span class="cur">ج.م</span></span><span class="card-unit">${section.unit}</span></div>` : ""}
+        <div class="soldout-note">⏳ نفد مؤقتًا — <strong>هيتوفر قريبًا</strong></div>
+        <a class="soldout-ask" href="https://wa.me/${STORE.whatsapp}?text=${ask}" target="_blank" rel="noopener">🔔 اسأل عن موعد توفره</a>
+      </div>
+    `;
+    return card;
+  }
 
   if (item.customBox) {
     card.classList.add("card-custom-box");
@@ -363,7 +397,7 @@ function openBoxBuilder(section, item) {
   els.boxRangeText.textContent = `من ${item.minWeight} لحد ${item.maxWeight} ${unitLabel}`;
 
   els.boxItems.innerHTML = "";
-  tab.items.filter((wItem) => !wItem.excludeFromBox).forEach((wItem) => {
+  tab.items.filter((wItem) => !wItem.excludeFromBox && !wItem.soldOut).forEach((wItem) => {
     const row = document.createElement("div");
     row.className = "box-builder-row";
     row.dataset.name = wItem.name;
@@ -475,6 +509,8 @@ function confirmBoxBuilder() {
     section: "علب شكولاتة",
     img: item.img,
     qty: 1,
+    boxLink: item.linkToTab,
+    boxSelections: { ...selections },
   };
 
   refreshCartUI();
@@ -645,16 +681,19 @@ function buildSearchIndex() {
       if (sub.comingSoon || !sub.items) return;
       sub.items.forEach((item) => {
         const dealOn = hasActiveDeal(item);
-        const priceLabel = item.customBox
-          ? `من ${item.minWeight} لـ ${item.maxWeight} ${item.weightUnitLabel || "كيلو"}`
-          : `${money(Math.round(effectivePrice(item, null)))} ج.م`;
+        const priceLabel = item.soldOut
+          ? "نفد مؤقتًا"
+          : item.customBox
+            ? `من ${item.minWeight} لـ ${item.maxWeight} ${item.weightUnitLabel || "كيلو"}`
+            : `${money(Math.round(effectivePrice(item, null)))} ج.م`;
         idx.push({
           name: item.name,
           img: item.img,
           sectionId: sub.id,
           pathLabel: parentTitle ? `${parentTitle} › ${sub.title}` : sub.title,
           priceLabel,
-          hasDeal: dealOn,
+          hasDeal: dealOn && !item.soldOut,
+          soldOut: !!item.soldOut,
           dealPercent: dealOn ? item.deal.percent : 0,
           searchNorm: normalizeArabic(item.name),
         });
@@ -684,7 +723,7 @@ function renderSearchResults(list, rawQuery) {
         <h4>${entry.name}${entry.hasDeal ? ` <span class="sr-deal">🔥 عرض −${money(entry.dealPercent)}%</span>` : ""}</h4>
         <div class="sr-path">${entry.pathLabel}</div>
       </div>
-      <div class="sr-price">${entry.priceLabel}</div>
+      <div class="sr-price${entry.soldOut ? " soldout" : ""}">${entry.priceLabel}</div>
     `;
     row.addEventListener("click", () => goToSearchResult(entry));
     els.searchResults.appendChild(row);
@@ -864,7 +903,15 @@ function buildWeightGrid(section, item, grind) {
     btn.className = "weight-btn";
     btn.dataset.key = key;
     fillWeightBtn(btn, w, section, item, grind);
-    btn.addEventListener("click", () => changeWeightQty(section, item, w, 1, grind));
+    btn.addEventListener("click", (e) => {
+      // الـ ✕ الأحمر الصغير: للتراجع لو العميل داس بالغلط (بيشيل واحدة)
+      if (e.target.closest(".wb-undo")) {
+        e.stopPropagation();
+        changeWeightQty(section, item, w, -1, grind);
+        return;
+      }
+      changeWeightQty(section, item, w, 1, grind);
+    });
     grid.appendChild(btn);
   });
 
@@ -881,7 +928,7 @@ function fillWeightBtn(btn, w, section, item, grind) {
 
   btn.classList.toggle("active", qty > 0);
   btn.innerHTML = `
-    ${qty > 0 ? `<span class="wb-badge">${qty}</span>` : ""}
+    ${qty > 0 ? `<span class="wb-badge">${qty}</span><span class="wb-undo" role="button" aria-label="شيل واحدة من السلة" title="شيل واحدة">✕</span>` : ""}
     <span class="wb-label">${label}</span>
     <span class="wb-price">${money(unitPrice)} ج.م</span>
   `;
@@ -895,7 +942,10 @@ function changeWeightQty(section, item, w, dir, grind) {
   const label = weightLabelFor(w, unitNoun);
 
   if (!cart[key]) {
-    cart[key] = { name, weightLabel: label, section: section.title, img: item.img, qty: 0 };
+    cart[key] = {
+      name, weightLabel: label, section: section.title, img: item.img, qty: 0,
+      subId: section.id, itemName: item.name, factor: w.factor, grindKey: grind ? grind.key : null,
+    };
   }
   applyLinePricing(cart[key], item, unitPrice, Math.round(basePriceOf(item, grind) * w.factor));
   cart[key].qty += dir;
@@ -907,6 +957,7 @@ function changeWeightQty(section, item, w, dir, grind) {
 
   refreshCartUI();
   if (dir > 0) showToast(`✓ اتضاف ${name} (${label}) للسلة`);
+  else showToast(`↩️ اتشال ${name} (${label}) من السلة`);
 }
 
 // بنحدّث سعر السطر في كل إضافة، فلو العرض بدأ أو خلص بين إضافة والتانية
@@ -918,30 +969,149 @@ function applyLinePricing(line, item, unitPrice, basePrice) {
     line.basePrice = basePrice;
     line.dealEndsAt = item.deal.endsAt;
     line.dealPercent = item.deal.percent;
+    line.dealId = item.deal.id;
   } else {
     delete line.basePrice;
     delete line.dealEndsAt;
     delete line.dealPercent;
+    delete line.dealId;
   }
 }
 
 function reconcileCartDeals() {
   const now = Date.now();
   const expired = [];
-  Object.values(cart).forEach((l) => {
+  let removedAny = false;
+  Object.entries(cart).forEach(([key, l]) => {
     if (l.dealEndsAt && l.dealEndsAt <= now) {
+      expired.push({ name: l.name, removed: !!l.standaloneDeal });
+      if (l.standaloneDeal) { delete cart[key]; removedAny = true; return; } // عرض مستقل مالوش سعر عادي
       l.price = l.basePrice;
-      expired.push(l.name);
       delete l.basePrice;
       delete l.dealEndsAt;
       delete l.dealPercent;
+      delete l.dealId;
     }
   });
   if (expired.length) {
     refreshCartUI();
-    showToast(`⏰ انتهى عرض ${expired[0]}${expired.length > 1 ? " وغيره" : ""}، واتحسب بالسعر العادي`);
+    if (removedAny) rebuildAllCardActions();
+    const first = expired[0];
+    showToast(first.removed
+      ? `⏰ انتهى عرض ${first.name}${expired.length > 1 ? " وغيره" : ""} واتشال من السلة`
+      : `⏰ انتهى عرض ${first.name}${expired.length > 1 ? " وغيره" : ""}، واتحسب بالسعر العادي`);
   }
   return expired.length > 0;
+}
+
+/* ------------------------------ حفظ واسترجاع السلة ------------------------- */
+
+function cartSignature() {
+  return Object.entries(cart).map(([k, l]) => `${k}:${l.qty}`).sort().join("|");
+}
+
+function saveCartToStorage() {
+  try {
+    const sig = cartSignature();
+    if (!sig || sig === sentCartSig) { localStorage.removeItem(CART_STORAGE_KEY); return; }
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify({ ts: Date.now(), lines: cart }));
+  } catch (e) { /* تجاهل لو التخزين مش متاح */ }
+}
+
+function loadSavedCart() {
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    if (!data || !data.lines || Date.now() - (data.ts || 0) > CART_MAX_AGE) {
+      localStorage.removeItem(CART_STORAGE_KEY);
+      return;
+    }
+    Object.entries(data.lines).forEach(([k, l]) => {
+      if (l && l.qty > 0 && typeof l.price === "number" && l.name) cart[k] = l;
+    });
+    restoredFromStorage = Object.keys(cart).length > 0;
+  } catch (e) { /* تجاهل */ }
+}
+
+function findSubById(subId) {
+  for (const section of STORE.sections) {
+    const subs = section.tabs ? section.tabs : [section];
+    for (const sub of subs) if (sub.id === subId) return sub;
+  }
+  return null;
+}
+
+// بتعيد تسعير كل سطر من الكتالوج الحالي: السعر الجديد، العرض الشغال، وبتشيل
+// أي صنف اتحذف أو نفد أو خلص عرضه المستقل
+function repriceSavedCart() {
+  const changed = [];
+  const dropped = [];
+  Object.entries(cart).forEach(([key, line]) => {
+    // علبة اختيار حر (زي علبة هدايا فرحات)
+    if (line.boxSelections) {
+      const tab = findLinkedTab({ linkToTab: line.boxLink });
+      let ok = !!tab;
+      let total = 0;
+      const parts = [];
+      if (tab) {
+        for (const [name, q] of Object.entries(line.boxSelections)) {
+          const w = tab.items.find((i) => i.name === name && !i.soldOut);
+          if (!w) { ok = false; break; }
+          total += w.price * (q * 0.25);
+          parts.push(`${name} (${q * 0.25} كجم)`);
+        }
+      }
+      if (!ok) { delete cart[key]; dropped.push(line.name); return; }
+      const np = Math.round(total);
+      if (np !== line.price) changed.push(line.name);
+      line.price = np;
+      line.composition = parts.join("، ");
+      return;
+    }
+    // عرض مستقل (مش موجود في الكتالوج)
+    if (line.standaloneDeal) {
+      const deal = liveDeals().find((d) => d.id === line.dealId);
+      if (!deal) { delete cart[key]; dropped.push(line.name); return; }
+      const np = Math.round(deal.originalPrice * (1 - deal.discountPercent / 100));
+      if (np !== line.price) changed.push(line.name);
+      line.price = np;
+      line.basePrice = deal.originalPrice;
+      line.dealEndsAt = dealEndsMs(deal);
+      line.dealPercent = deal.discountPercent;
+      return;
+    }
+    // صنف عادي
+    const sub = findSubById(line.subId);
+    const item = sub && (sub.items || []).find((i) => i.name === line.itemName);
+    if (!item || item.soldOut) { delete cart[key]; dropped.push(line.name); return; }
+    const grind = line.grindKey && sub.grindOptions ? (sub.grindOptions.find((g) => g.key === line.grindKey) || null) : null;
+    const factor = line.factor || 1;
+    const np = Math.round(effectivePrice(item, grind) * factor);
+    const nb = Math.round(basePriceOf(item, grind) * factor);
+    if (np !== line.price) changed.push(line.name);
+    applyLinePricing(line, item, np, nb);
+  });
+  return { changed, dropped };
+}
+
+function finalizeCartRestore() {
+  if (cartFinalized) return;
+  cartFinalized = true;
+  if (!restoredFromStorage) return;
+  const { changed, dropped } = repriceSavedCart();
+  refreshCartUI();
+  rebuildAllCardActions();
+  if (Object.keys(cart).length === 0 && dropped.length === 0) return;
+  if (dropped.length) showToast(`⚠️ ${dropped.length === 1 ? dropped[0] : `${dropped.length} أصناف`} مبقاش متاح واتشال من سلتك${changed.length ? "، وأسعار تانية اتحدّثت" : ""}`);
+  else if (changed.length) showToast("💲 أسعار في سلتك اتحدّثت، راجعها قبل التأكيد");
+  else showToast("🛒 رجّعنالك سلتك اللي كنت مجهزها");
+}
+
+function markSettled(which) {
+  if (which === "products") productsSettled = true;
+  else dealsSettled = true;
+  if (productsSettled && dealsSettled) finalizeCartRestore();
 }
 
 function renderCardAction(slot, section, item, key) {
@@ -955,7 +1125,9 @@ function renderCardAction(slot, section, item, key) {
   } else {
     slot.innerHTML = `
       <div class="qty-row">
-        <button type="button" data-dir="-1" aria-label="تقليل">−</button>
+        ${inCart.qty === 1
+          ? `<button type="button" class="qty-remove" data-dir="-1" aria-label="شيل من السلة" title="شيل من السلة">✕</button>`
+          : `<button type="button" data-dir="-1" aria-label="تقليل">−</button>`}
         <span class="qty-val">${inCart.qty}</span>
         <button type="button" data-dir="1" aria-label="زيادة">+</button>
       </div>`;
@@ -969,7 +1141,10 @@ function renderCardAction(slot, section, item, key) {
 
 function changeQty(section, item, key, dir) {
   if (!cart[key]) {
-    cart[key] = { name: item.name, unit: section.unit, section: section.title, img: item.img, qty: 0 };
+    cart[key] = {
+      name: item.name, unit: section.unit, section: section.title, img: item.img, qty: 0,
+      subId: section.id, itemName: item.name, factor: null, standaloneDeal: section.id === "deals",
+    };
   }
   applyLinePricing(cart[key], item, Math.round(effectivePrice(item, null)), Math.round(basePriceOf(item, null)));
   cart[key].qty += dir;
@@ -990,6 +1165,7 @@ function cartCount() { return Object.values(cart).reduce((s, l) => s + l.qty, 0)
 function cartTotalValue() { return Object.values(cart).reduce((s, l) => s + l.qty * l.price, 0); }
 
 function refreshCartUI() {
+  saveCartToStorage();
   const count = cartCount();
   const total = cartTotalValue();
 
@@ -1064,9 +1240,10 @@ function refreshWeightBadge(btn) {
   const existingBadge = btn.querySelector(".wb-badge");
   if (qty > 0) {
     if (existingBadge) existingBadge.textContent = qty;
-    else btn.insertAdjacentHTML("afterbegin", `<span class="wb-badge">${qty}</span>`);
+    else btn.insertAdjacentHTML("afterbegin", `<span class="wb-badge">${qty}</span><span class="wb-undo" role="button" aria-label="شيل واحدة من السلة" title="شيل واحدة">✕</span>`);
   } else if (existingBadge) {
     existingBadge.remove();
+    btn.querySelector(".wb-undo")?.remove();
   }
 }
 
@@ -1195,6 +1372,8 @@ els.confirmBtn.addEventListener("click", () => {
   const url = `https://wa.me/${STORE.whatsapp}?text=${text}`;
   window.open(url, "_blank");
   logOrderToFirestore(); // من غير ما ننتظرها، عشان متأخرش فتح واتساب
+  sentCartSig = cartSignature(); // الطلب اتبعت: لو عمل ريفريش تبقى السلة فاضية مش طلب مكرر
+  saveCartToStorage();
 });
 
 // بتسجّل الطلب في لوحة التحكم (لو الاتصال بـ Firebase شغال). لو فشلت لأي
@@ -1397,6 +1576,7 @@ document.querySelectorAll(".js-phone-display").forEach((el) => (el.textContent =
 document.querySelectorAll(".js-phone-link").forEach((el) => (el.href = `tel:0${STORE.whatsapp.slice(2)}`));
 document.querySelectorAll(".js-address").forEach((el) => (el.textContent = STORE.address));
 
+loadSavedCart();
 buildSections();
 buildSectionsMenu();
 searchIndex = buildSearchIndex();
@@ -1510,13 +1690,37 @@ function sliderMetrics(track) {
   return { max, pos: Math.min(max, Math.abs(track.scrollLeft)) };
 }
 
+// حالة "عرض الكل" لكل شبكة (بتفضل محفوظة لحد ما الصفحة تتقفل). الأقسام
+// الكبيرة (أكتر من 24 صنف زي الشكولاتة بالوزن) بتفتح "عرض الكل" من الأول.
+const expandedGrids = {};
+const AUTO_EXPAND_OVER = 24;
+
+function gridKey(grid) {
+  const panel = grid.closest(".mood-panel");
+  return panel ? `tab:${panel.dataset.tab}` : `sec:${grid.closest(".product-section")?.id || ""}`;
+}
+function isGridExpanded(grid) {
+  const k = gridKey(grid);
+  if (k in expandedGrids) return expandedGrids[k];
+  return grid.children.length > AUTO_EXPAND_OVER;
+}
+
 function updateSliderUIs() {
   document.querySelectorAll(".gs-controls").forEach((ctl) => {
     const grid = ctl.previousElementSibling;
     if (!grid) return;
+    const count = grid.children.length;
+    const expanded = isGridExpanded(grid);
+    grid.classList.toggle("grid-expanded", expanded);
+
+    ctl.hidden = count <= 4;
+    const toggle = ctl.querySelector(".gs-toggle");
+    toggle.textContent = expanded ? "⬆ عرض أقل (سحب أفقي)" : `عرض كل الـ ${money(count)} صنف ⬇`;
+
+    const swipe = ctl.querySelector(".gs-swipe");
     const { max, pos } = sliderMetrics(grid);
-    const overflow = max > 6 && grid.clientWidth > 0;
-    ctl.hidden = !overflow;
+    const overflow = !expanded && max > 6 && grid.clientWidth > 0;
+    swipe.hidden = !overflow;
     if (!overflow) return;
     const fill = ctl.querySelector(".gs-progress span");
     const widthPct = Math.max(14, (grid.clientWidth / grid.scrollWidth) * 100);
@@ -1537,13 +1741,26 @@ function enhanceGridSliders() {
     ctl.className = "gs-controls";
     ctl.hidden = true;
     ctl.innerHTML = `
-      <button type="button" class="gs-btn gs-prev" aria-label="السابق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
-      <div class="gs-mid"><span class="gs-hint">اسحب لمزيد من المنتجات</span><div class="gs-progress"><span></span></div></div>
-      <button type="button" class="gs-btn gs-next" aria-label="التالي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="gs-swipe">
+        <button type="button" class="gs-btn gs-prev" aria-label="السابق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+        <div class="gs-mid"><span class="gs-hint">اسحب لمزيد من المنتجات</span><div class="gs-progress"><span></span></div></div>
+        <button type="button" class="gs-btn gs-next" aria-label="التالي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+      </div>
+      <button type="button" class="gs-toggle"></button>
     `;
     grid.after(ctl);
     ctl.querySelector(".gs-prev").addEventListener("click", () => sliderMove(grid, -1));
     ctl.querySelector(".gs-next").addEventListener("click", () => sliderMove(grid, 1));
+    ctl.querySelector(".gs-toggle").addEventListener("click", () => {
+      const nowExpanded = !isGridExpanded(grid);
+      expandedGrids[gridKey(grid)] = nowExpanded;
+      grid.classList.toggle("grid-expanded", nowExpanded);
+      if (!nowExpanded) {
+        grid.scrollLeft = 0;
+        grid.closest(".product-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+      updateSliderUIs();
+    });
     let raf = 0;
     grid.addEventListener("scroll", () => {
       cancelAnimationFrame(raf);
@@ -1678,10 +1895,11 @@ function syncDeals() {
 }
 
 function loadDeals() {
-  if (!window.Farahat || !window.Farahat.fetchDeals) return;
+  if (!window.Farahat || !window.Farahat.fetchDeals) { markSettled("deals"); return; }
   window.Farahat.fetchDeals()
     .then((list) => { allDeals = list; syncDeals(); })
-    .catch((e) => console.warn("Farahat: تعذّر تحميل عروض اليوم.", e));
+    .catch((e) => console.warn("Farahat: تعذّر تحميل عروض اليوم.", e))
+    .finally(() => markSettled("deals"));
 }
 
 function renderDeals() {
@@ -1762,21 +1980,23 @@ window.addEventListener("farahat-products-ready", (e) => {
   syncDeals();
 });
 
-if (window.Farahat) {
+function startFirebaseSync() {
   window.Farahat.fetchProducts()
     .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
-    .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
+    .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e))
+    .finally(() => markSettled("products"));
   window.Farahat.incrementVisit();
   loadDeals();
-} else {
-  window.addEventListener("farahat-firebase-ready", () => {
-    window.Farahat.fetchProducts()
-      .then((products) => window.dispatchEvent(new CustomEvent("farahat-products-ready", { detail: products })))
-      .catch((e) => console.warn("Farahat: تعذّر تحميل المنتجات المحدّثة، هيفضل يظهر السعر الأساسي.", e));
-    window.Farahat.incrementVisit();
-    loadDeals();
-  });
 }
+
+if (window.Farahat) {
+  startFirebaseSync();
+} else {
+  window.addEventListener("farahat-firebase-ready", startFirebaseSync);
+}
+// لو الاتصال بـ Firebase اتأخر أو مااشتغلش، السلة برضو ترجع بأسعار الكتالوج الأساسي
+setTimeout(finalizeCartRestore, 8000);
+
 
 
 /* ------------------------------ الوضع الداكن / الفاتح ---------------------- */
