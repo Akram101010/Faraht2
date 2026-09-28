@@ -96,6 +96,7 @@ let orders = [];
 let deals = [];
 let editingProductId = null;
 let editingDealId = null;
+let dealSource = null; // { sectionId, tabId, name } لو العرض مربوط بمنتج موجود
 let toastTimer = null;
 let booted = false;
 
@@ -566,7 +567,8 @@ function populateDealSourceSelect() {
 
 els.dfSourceProduct.addEventListener("change", () => {
   const p = products.find((x) => x.id === els.dfSourceProduct.value);
-  if (!p) return;
+  if (!p) { dealSource = null; return; }
+  dealSource = { sectionId: p.sectionId, tabId: p.tabId || null, name: p.name };
   els.dfName.value = p.name || "";
   els.dfImg.value = p.img || "";
   els.dfOriginalPrice.value = typeof p.price === "number" ? p.price : "";
@@ -610,7 +612,7 @@ function renderDealsTable() {
     return `
       <tr data-id="${d.id}" class="${expired ? "row-inactive" : ""}">
         <td>${thumb}</td>
-        <td>${d.name || "—"}</td>
+        <td>${d.name || "—"}${d.sourceName ? ' <span class="linked-chip" title="بيظهر كمان على كارت المنتج في قسمه">🔗 مربوط بمنتج</span>' : ''}</td>
         <td class="price-cell">${money(d.originalPrice)} ج.م</td>
         <td>${money(d.discountPercent)}%</td>
         <td class="price-cell">${money(finalPrice)} ج.م</td>
@@ -637,6 +639,9 @@ function toDatetimeLocalValue(date) {
 
 function openDealModal(deal) {
   editingDealId = deal ? deal.id : null;
+  dealSource = (deal && deal.sourceName)
+    ? { sectionId: deal.sourceSectionId, tabId: deal.sourceTabId || null, name: deal.sourceName }
+    : null;
   els.dealModalTitle.textContent = deal ? "تعديل عرض" : "إضافة عرض";
   els.dealFormError.textContent = "";
   els.dealForm.reset();
@@ -649,6 +654,10 @@ function openDealModal(deal) {
     els.dfOriginalPrice.value = deal.originalPrice ?? "";
     els.dfDiscountPercent.value = deal.discountPercent ?? "";
     els.dfEndsAt.value = toDatetimeLocalValue(dealEndsAtDate(deal));
+    if (dealSource) {
+      const src = products.find((x) => x.name === dealSource.name && x.sectionId === dealSource.sectionId && (x.tabId || null) === (dealSource.tabId || null));
+      if (src) els.dfSourceProduct.value = src.id;
+    }
     els.dealDeleteBtn.hidden = false;
   } else {
     const inTwoHours = new Date(Date.now() + 2 * 3600000);
@@ -687,6 +696,11 @@ els.dealForm.addEventListener("submit", async (e) => {
     discountPercent,
     endsAt: new Date(endsAtVal),
     active: true,
+    // لو العرض على منتج موجود في الموقع، بنسجّل مكانه عشان كارت المنتج نفسه
+    // (في قسمه) يتغير ويبان عليه العرض والسعر الجديد، مش بس كارت العروض.
+    sourceSectionId: dealSource ? dealSource.sectionId : null,
+    sourceTabId: dealSource ? (dealSource.tabId || null) : null,
+    sourceName: dealSource ? dealSource.name : null,
   };
 
   const submitBtn = els.dealForm.querySelector('button[type="submit"]');

@@ -20,6 +20,14 @@
   --line: #e6dcc4;
   --whatsapp: #2fae5b;
 
+  --forest-ink: var(--forest);       /* لون النصوص الخضرا (بيفتح في الداكن) */
+  --gold-ink: var(--gold-deep);      /* لون النصوص الدهبية */
+  --header-bg: rgba(250, 246, 236, 0.92);
+  --section-alt: rgba(246, 236, 211, 0.92);
+  --media-bg: linear-gradient(145deg, #eef0df, #e3ddc4);
+  --hover-soft: #fffaf0;
+  --close-hover: #e9dfc7;
+  --deal-red: #c0271a;
   --font-body: "Tajawal", "Segoe UI", sans-serif;
   --font-numeric: "Cairo", "Tajawal", "Segoe UI", sans-serif; /* فونت أنضف للأرقام/الأسعار */
 
@@ -216,7 +224,7 @@ button {
   font-size: clamp(1.5rem, 1.15rem + 1.2vw, 2.05rem);
   font-weight: 800;
   margin: 0;
-  color: var(--forest);
+  color: var(--forest-ink);
   letter-spacing: -0.01em;
 }
 
@@ -235,7 +243,7 @@ button {
   height: var(--header-h);
   display: flex;
   align-items: center;
-  background: rgba(250, 246, 236, 0.92);
+  background: var(--header-bg);
   backdrop-filter: blur(14px);
   box-shadow: 0 1px 0 rgba(51, 82, 48, 0.08), 0 12px 24px -18px rgba(34, 58, 32, 0.35);
 }
@@ -279,7 +287,7 @@ button {
   align-items: center;
   gap: 6px;
   font-size: 0.82rem;
-  color: var(--forest);
+  color: var(--forest-ink);
   border: 1px solid var(--line);
   padding: 7px 12px;
   border-radius: 999px;
@@ -300,7 +308,7 @@ button {
   justify-content: center;
   border-radius: 999px;
   border: 1px solid rgba(125, 154, 90, 0.35);
-  color: var(--forest);
+  color: var(--forest-ink);
   background: linear-gradient(160deg, var(--paper) 0%, var(--cream-2) 100%);
   box-shadow: 0 4px 10px -4px rgba(34, 58, 32, 0.3);
   transition: background 0.18s ease, border-color 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease;
@@ -308,7 +316,7 @@ button {
 .search-toggle-btn svg { width: 18px; height: 18px; }
 .search-toggle-btn:hover {
   background: linear-gradient(135deg, var(--sun), var(--gold-deep));
-  border-color: var(--gold-deep);
+  border-color: var(--gold-ink);
   color: #fff;
   transform: translateY(-2px);
   box-shadow: 0 8px 16px -6px rgba(173, 122, 46, 0.55);
@@ -378,7 +386,7 @@ button {
   border-bottom: 1px solid var(--line);
   flex-shrink: 0;
 }
-.sections-menu-header h2 { margin: 0; font-size: 1.05rem; color: var(--forest); }
+.sections-menu-header h2 { margin: 0; font-size: 1.05rem; color: var(--forest-ink); }
 
 .sections-menu-close {
   width: 30px;
@@ -392,7 +400,7 @@ button {
   font-size: 0.8rem;
   font-weight: 700;
 }
-.sections-menu-close:hover { background: #e9dfc7; }
+.sections-menu-close:hover { background: var(--close-hover); }
 
 .sections-menu-list {
   overflow-y: auto;
@@ -431,7 +439,7 @@ button {
   transition: transform 0.25s ease;
 }
 .smi-item.open .smi-arrow { transform: rotate(180deg); }
-.smi-item.open .smi-row { background: var(--cream-2); color: var(--forest); }
+.smi-item.open .smi-row { background: var(--cream-2); color: var(--forest-ink); }
 
 .smi-sub {
   display: grid;
@@ -454,7 +462,7 @@ button {
   text-align: right;
   border-radius: var(--radius-s);
 }
-.smi-subitem:hover { background: var(--cream-2); color: var(--forest); }
+.smi-subitem:hover { background: var(--cream-2); color: var(--forest-ink); }
 .smi-subitem span { font-size: 1rem; flex-shrink: 0; }
 
 /* ------------------------------ زرار "لأول الصفحة" -------------------------- */
@@ -471,7 +479,7 @@ button {
   justify-content: center;
   border-radius: 999px;
   background: var(--paper);
-  color: var(--forest);
+  color: var(--forest-ink);
   border: 1px solid var(--line);
   box-shadow: var(--shadow-soft);
   opacity: 0;
@@ -537,7 +545,7 @@ button {
 }
 .main-nav a .nav-icon { font-size: 0.95em; line-height: 1; }
 
-.main-nav a:hover { background: var(--cream-2); color: var(--gold-deep); transform: translateY(-1px); }
+.main-nav a:hover { background: var(--cream-2); color: var(--gold-ink); transform: translateY(-1px); }
 .main-nav a.active {
   background: linear-gradient(135deg, var(--forest) 0%, var(--forest-dark) 100%);
   color: #fff;
@@ -733,7 +741,7 @@ button {
 .trust-strip span {
   font-size: 0.86rem;
   font-weight: 700;
-  color: var(--forest);
+  color: var(--forest-ink);
   white-space: nowrap;
 }
 
@@ -763,10 +771,10 @@ button {
   border-radius: 999px;
   font-weight: 700;
   font-size: 0.88rem;
-  color: var(--forest);
+  color: var(--forest-ink);
   transition: border-color 0.18s, transform 0.18s;
 }
-.chip:hover { border-color: var(--sun); background: #fffaf0; transform: translateY(-3px); box-shadow: 0 10px 20px -12px rgba(224,152,47,0.45); }
+.chip:hover { border-color: var(--sun); background: var(--hover-soft); transform: translateY(-3px); box-shadow: 0 10px 20px -12px rgba(224,152,47,0.45); }
 .chip .icon { font-size: 1.05rem; }
 
 /* ------------------------------- قسم المزاج ------------------------------- */
@@ -793,10 +801,10 @@ button {
 }
 .mood-tab .icon { font-size: 1.05rem; }
 .mood-tab .tab-count { font-size: 0.76rem; font-weight: 600; opacity: 0.75; }
-.mood-tab:hover { border-color: var(--olive); color: var(--forest); }
+.mood-tab:hover { border-color: var(--olive); color: var(--forest-ink); }
 .mood-tab.active {
   background: var(--forest);
-  border-color: var(--forest);
+  border-color: var(--forest-ink);
   color: #fff;
   box-shadow: 0 8px 18px -10px rgba(47, 82, 40, 0.5);
 }
@@ -816,7 +824,7 @@ button {
   scroll-margin-top: calc(var(--header-h) + 14px);
 }
 
-.product-section:nth-of-type(even) { background: rgba(246, 236, 211, 0.92); }
+.product-section:nth-of-type(even) { background: var(--section-alt); }
 
 .grid {
   display: grid;
@@ -956,7 +964,7 @@ button {
   position: relative;
   aspect-ratio: 1 / 1;
   overflow: hidden;
-  background: linear-gradient(145deg, #eef0df, #e3ddc4);
+  background: var(--media-bg);
 }
 
 .card-media img {
@@ -1023,7 +1031,7 @@ button {
 .card-price {
   font-size: 1.22rem;
   font-weight: 900;
-  color: var(--gold-deep);
+  color: var(--gold-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1071,7 +1079,7 @@ button {
   border: 1px solid var(--line);
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--forest);
+  color: var(--forest-ink);
 }
 .qty-row button:hover { background: var(--sun); border-color: var(--sun); color: var(--forest-dark); }
 
@@ -1122,7 +1130,7 @@ button {
 
 .weight-btn.active {
   background: var(--forest);
-  border-color: var(--forest);
+  border-color: var(--forest-ink);
 }
 .weight-btn.active .wb-label { color: #fff; }
 .weight-btn.active .wb-price { color: var(--sun); }
@@ -1135,7 +1143,7 @@ button {
 .wb-price {
   font-size: 0.72rem;
   font-weight: 800;
-  color: var(--gold-deep);
+  color: var(--gold-ink);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1182,7 +1190,7 @@ button {
 .grind-btn:hover { border-color: var(--olive); }
 .grind-btn.active {
   background: var(--gold-deep);
-  border-color: var(--gold-deep);
+  border-color: var(--gold-ink);
   color: #fff;
 }
 .grind-btn.active .grind-extra { color: rgba(255, 255, 255, 0.85); }
@@ -1199,7 +1207,7 @@ button {
   border: 1.5px solid var(--gold);
   background: linear-gradient(180deg, var(--paper) 0%, var(--cream-2) 100%);
 }
-.card-custom-box:hover { border-color: var(--gold-deep); }
+.card-custom-box:hover { border-color: var(--gold-ink); }
 
 .custom-box-range {
   align-self: flex-start;
@@ -1230,7 +1238,7 @@ button {
   background: var(--paper);
 }
 .coming-soon .icon { font-size: 2.4rem; margin-bottom: 10px; display: block; }
-.coming-soon strong { display: block; color: var(--forest); font-size: 1.15rem; margin-bottom: 6px; }
+.coming-soon strong { display: block; color: var(--forest-ink); font-size: 1.15rem; margin-bottom: 6px; }
 
 /* --------------------- تنويه "فيه كمان" آخر كل تبويب ----------------------- */
 
@@ -1249,7 +1257,7 @@ button {
 .oth-label {
   font-size: 0.86rem;
   font-weight: 700;
-  color: var(--forest);
+  color: var(--forest-ink);
   margin-inline-end: 2px;
 }
 
@@ -1266,7 +1274,7 @@ button {
   color: var(--ink);
   transition: border-color 0.15s ease, background 0.15s ease, transform 0.15s ease;
 }
-.oth-chip:hover { border-color: var(--gold-deep); background: #fffaf0; transform: translateY(-2px); }
+.oth-chip:hover { border-color: var(--gold-ink); background: var(--hover-soft); transform: translateY(-2px); }
 
 /* ------------------------------ زر السلة العائم -------------------------- */
 
@@ -1391,7 +1399,7 @@ button {
   font-size: 0.8rem;
   font-weight: 700;
 }
-.search-close:hover { background: #e9dfc7; }
+.search-close:hover { background: var(--close-hover); }
 
 .search-results {
   overflow-y: auto;
@@ -1440,7 +1448,7 @@ button {
   flex-shrink: 0;
   font-size: 0.82rem;
   font-weight: 800;
-  color: var(--gold-deep);
+  color: var(--gold-ink);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -1525,7 +1533,7 @@ button {
   border-bottom: 1px solid var(--line);
   background: var(--paper);
 }
-.cart-header h2 { margin: 0; font-size: 1.15rem; color: var(--forest); font-weight: 800; }
+.cart-header h2 { margin: 0; font-size: 1.15rem; color: var(--forest-ink); font-weight: 800; }
 .cart-close {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
@@ -1683,7 +1691,7 @@ button {
   align-items: baseline;
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--forest);
+  color: var(--forest-ink);
 }
 .cart-total-row span:last-child { font-variant-numeric: tabular-nums; }
 
@@ -1726,7 +1734,7 @@ button {
   border-bottom: 1px solid var(--line);
   background: var(--paper);
 }
-.box-builder-hint strong { color: var(--gold-deep); }
+.box-builder-hint strong { color: var(--gold-ink); }
 
 .box-builder-items {
   flex: 1;
@@ -1778,7 +1786,7 @@ button {
   border: 1px solid var(--line);
   font-size: 1rem;
   font-weight: 700;
-  color: var(--forest);
+  color: var(--forest-ink);
 }
 .bb-stepper button:hover { background: var(--sun); border-color: var(--sun); color: var(--forest-dark); }
 .bb-val {
@@ -1805,7 +1813,7 @@ button {
   align-items: baseline;
   font-weight: 800;
   font-size: 1rem;
-  color: var(--forest);
+  color: var(--forest-ink);
 }
 .box-builder-total-row span:last-child { font-variant-numeric: tabular-nums; }
 
@@ -2004,7 +2012,7 @@ button {
 }
 
 @media (max-width: 420px) {
-  .grid { grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 12px; }
+  #sections .grid { grid-auto-columns: minmax(148px, 47vw); }
   .card-body { padding: 10px; }
 }
 
@@ -2024,4 +2032,459 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   .reveal, .hero-content { opacity: 1 !important; transform: none !important; }
+}
+
+
+/* ==========================================================================
+   تحديث الشكل الاحترافي: عروض / سلايدر / إضاءة البحث / منيو / لوجو / داكن
+   ========================================================================== */
+
+/* ------------------------------ الوضع الداكن ------------------------------- */
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cream: #12160e;
+  --cream-2: #1b2114;
+  --paper: #171c11;
+  --ink: #efe7d3;
+  --ink-soft: #b3ab94;
+  --line: #2c3523;
+  --forest-ink: #a9c98a;
+  --gold-ink: #e6b968;
+  --deal-red: #ff7a5c;
+  --header-bg: rgba(18, 22, 14, 0.9);
+  --section-alt: rgba(24, 30, 18, 0.92);
+  --media-bg: linear-gradient(145deg, #1f261a, #171c11);
+  --hover-soft: #202818;
+  --close-hover: #2b3421;
+  --shadow: 0 12px 30px -14px rgba(0, 0, 0, 0.75);
+  --shadow-soft: 0 6px 18px -10px rgba(0, 0, 0, 0.7);
+}
+html[data-theme="dark"] body { background: var(--cream); color: var(--ink); }
+html[data-theme="dark"] .bg-watermark { filter: invert(1); opacity: 0.03; }
+html[data-theme="dark"] .hero { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 26px 50px -30px #000; }
+html[data-theme="dark"] .card { border-color: var(--line); }
+html[data-theme="dark"] .card-media img { filter: brightness(0.94) contrast(1.03); }
+html[data-theme="dark"] .trust-strip { background: var(--paper); border-color: var(--line); }
+html[data-theme="dark"] .brand .call-btn { color: var(--forest-ink); }
+html[data-theme="dark"] .page-loader-logo { filter: brightness(1.9) drop-shadow(0 0 14px rgba(230, 185, 104, 0.5)); }
+html[data-theme="dark"] .toast { background: #2b3421; color: #f1ead8; }
+html[data-theme="dark"] .field-error { color: #ff8a73; }
+html[data-theme="dark"] .weight-btn { background: var(--cream-2); }
+html[data-theme="dark"] .weight-btn:hover { background: var(--hover-soft); }
+html[data-theme="dark"] .weight-btn.active { background: var(--forest); }
+html[data-theme="dark"] .grind-btn { background: var(--cream-2); color: var(--ink-soft); }
+html[data-theme="dark"] .mood-tab { background: var(--paper); color: var(--ink-soft); }
+html[data-theme="dark"] .mood-tab.active { background: var(--forest); color: #fff; }
+html[data-theme="dark"] .chip { background: var(--paper); color: var(--ink); }
+html[data-theme="dark"] .logo-light { display: none; }
+html[data-theme="dark"] .logo-dark { display: block; }
+.logo-dark { display: none; }
+
+html.theme-anim *, html.theme-anim *::before, html.theme-anim *::after {
+  transition: background-color 0.35s ease, color 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease !important;
+}
+
+.theme-toggle-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(125, 154, 90, 0.35);
+  color: var(--forest-ink);
+  background: linear-gradient(160deg, var(--paper) 0%, var(--cream-2) 100%);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, 0.3);
+  transition: background 0.18s ease, transform 0.15s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+.theme-toggle-btn svg { width: 18px; height: 18px; }
+.theme-toggle-btn .icon-sun { display: none; }
+html[data-theme="dark"] .theme-toggle-btn .icon-sun { display: block; }
+html[data-theme="dark"] .theme-toggle-btn .icon-moon { display: none; }
+.theme-toggle-btn:hover {
+  background: linear-gradient(135deg, var(--sun), var(--gold-deep));
+  color: #fff;
+  transform: translateY(-2px) rotate(-12deg);
+  box-shadow: 0 8px 16px -6px rgba(173, 122, 46, 0.55);
+}
+@media (min-width: 721px) {
+  .theme-toggle-btn { width: 46px; height: 46px; }
+  .theme-toggle-btn svg { width: 21px; height: 21px; }
+}
+.site-header .container { gap: 8px; }
+
+/* ------------------------------ لوجو فخم منوّر ----------------------------- */
+
+.brand-logo-link { position: relative; isolation: isolate; }
+.brand-logo-link::before {
+  content: "";
+  position: absolute;
+  inset: -16px -22px;
+  z-index: -1;
+  background: radial-gradient(closest-side, rgba(219, 165, 69, 0.34), rgba(219, 165, 69, 0) 72%);
+  filter: blur(6px);
+  animation: logoHalo 4.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.brand-logo-link img { filter: drop-shadow(0 3px 8px rgba(173, 122, 46, 0.38)); }
+.brand-logo-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 32%, rgba(255, 255, 255, 0.96) 47%, rgba(255, 233, 180, 0.92) 53%, transparent 68%);
+  background-size: 280% 100%;
+  background-position: 135% 0;
+  -webkit-mask: url("images/logo_horizontal.png") center / contain no-repeat;
+  mask: url("images/logo_horizontal.png") center / contain no-repeat;
+  animation: logoSheen 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes logoHalo { 0%, 100% { opacity: 0.55; transform: scale(0.96); } 50% { opacity: 1; transform: scale(1.06); } }
+@keyframes logoSheen { 0%, 55% { background-position: 135% 0; } 100% { background-position: -40% 0; } }
+.page-loader-logo { filter: drop-shadow(0 0 16px rgba(219, 165, 69, 0.5)); }
+
+/* --------------------------- عروض: كروت المنتجات --------------------------- */
+
+.cur { font-size: 0.65em; font-weight: 700; }
+.price-was {
+  font-size: 0.74em;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-decoration: line-through;
+  text-decoration-color: var(--deal-red);
+  text-decoration-thickness: 1.5px;
+  margin-inline-end: 4px;
+}
+.card-has-deal {
+  border-color: rgba(230, 72, 44, 0.5);
+  box-shadow: 0 12px 28px -14px rgba(230, 72, 44, 0.55);
+}
+.card-has-deal .card-price { color: var(--deal-red); }
+.badge-deal {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: linear-gradient(135deg, #ff5a36, #c0271a);
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.72rem;
+  padding: 5px 11px;
+  border-radius: 999px;
+  box-shadow: 0 6px 14px -3px rgba(190, 35, 20, 0.65);
+  animation: dealPulse 2.1s ease-in-out infinite;
+}
+@keyframes dealPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+
+.card-deal-timer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 10px;
+  color: var(--deal-red);
+  background: rgba(230, 72, 44, 0.09);
+  border: 1px dashed rgba(230, 72, 44, 0.45);
+}
+.card-deal-timer .cdt { font-family: var(--font-numeric); font-variant-numeric: tabular-nums; direction: ltr; }
+.deal-cta-label { font-size: 0.78rem; font-weight: 800; color: var(--gold-ink); text-align: center; }
+.line-deal { font-size: 0.74rem; font-weight: 800; color: var(--deal-red); }
+.line-deal s { color: var(--ink-soft); font-weight: 600; margin-inline-start: 4px; }
+.sr-deal {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #ff5a36, #c0271a);
+  padding: 2px 8px;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+
+/* --------------------------- عروض اليوم: سلايدر --------------------------- */
+
+.deals-slider { position: relative; padding: 4px 0 8px; }
+.deals-track {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  padding: 8px 4px 16px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.deals-track::-webkit-scrollbar { display: none; }
+.deals-track > .deal-slide {
+  flex: 0 0 min(272px, 78vw);
+  scroll-snap-align: start;
+  opacity: 0.5;
+  transform: scale(0.955);
+  transition: opacity 0.45s ease, transform 0.45s cubic-bezier(.2, .8, .2, 1);
+  border-color: rgba(230, 72, 44, 0.4);
+  box-shadow: 0 22px 40px -18px rgba(0, 0, 0, 0.7);
+}
+.deals-track > .deal-slide.in-view { opacity: 1; transform: none; }
+.deal-slide .deal-timer { margin-top: 0; }
+
+.ds-arrow {
+  position: absolute;
+  top: 40%;
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  color: #2a1810;
+  box-shadow: 0 10px 22px -6px rgba(0, 0, 0, 0.6);
+  transition: transform 0.18s ease, opacity 0.2s ease;
+}
+.ds-arrow svg { width: 20px; height: 20px; }
+.ds-arrow:hover { transform: scale(1.1); }
+.ds-arrow:disabled { opacity: 0.25; pointer-events: none; }
+.ds-arrow[hidden] { display: none; }
+.ds-prev { right: -10px; }
+.ds-next { left: -10px; }
+.ds-dots { display: flex; justify-content: center; gap: 7px; margin-top: 4px; }
+.ds-dots[hidden] { display: none; }
+.ds-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.35);
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.ds-dot.active { width: 28px; background: var(--sun); }
+@media (max-width: 720px) {
+  .ds-arrow { width: 38px; height: 38px; top: 36%; }
+  .ds-prev { right: -4px; }
+  .ds-next { left: -4px; }
+}
+
+/* ---------------- شبكة المنتجات كسلايدر أفقي على الموبايل ------------------- */
+
+.gs-controls { display: none; }
+@media (max-width: 720px) {
+  #sections .grid {
+    display: grid;
+    grid-template-columns: none;
+    grid-template-rows: repeat(2, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(158px, 46vw);
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-behavior: smooth;
+    overscroll-behavior-x: contain;
+    padding: 8px 2px 10px;
+    scrollbar-width: none;
+  }
+  #sections .grid::-webkit-scrollbar { display: none; }
+  #sections .grid > .card { scroll-snap-align: start; }
+  .gs-controls:not([hidden]) { display: flex; align-items: center; gap: 10px; margin: 2px 0 8px; }
+}
+.gs-btn {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  color: var(--forest-ink);
+  box-shadow: var(--shadow-soft);
+}
+.gs-btn svg { width: 17px; height: 17px; }
+.gs-btn:disabled { opacity: 0.35; }
+.gs-mid { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.gs-hint { font-size: 0.72rem; font-weight: 700; color: var(--ink-soft); }
+.gs-progress { position: relative; width: 100%; height: 5px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.gs-progress span {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sun), var(--gold-deep));
+  transition: right 0.12s linear, width 0.2s ease;
+}
+
+/* ------------------------- إضاءة المنتج بعد البحث -------------------------- */
+
+.search-spotlight {
+  position: fixed;
+  z-index: 85;
+  pointer-events: none;
+  border-radius: 22px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  box-shadow: 0 0 0 100vmax rgba(6, 10, 4, 0.7);
+}
+.search-spotlight.on { opacity: 1; }
+.search-spotlight::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 3px solid var(--sun);
+  animation: spotRing 1.3s ease-in-out infinite;
+}
+@keyframes spotRing {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(219, 165, 69, 0.65), 0 0 30px 6px rgba(219, 165, 69, 0.5), inset 0 0 18px rgba(219, 165, 69, 0.2); }
+  50% { box-shadow: 0 0 0 12px rgba(219, 165, 69, 0), 0 0 48px 14px rgba(219, 165, 69, 0.8), inset 0 0 28px rgba(219, 165, 69, 0.38); }
+}
+.search-spotlight-label {
+  position: fixed;
+  z-index: 86;
+  transform: translate(-50%, -100%) translateY(10px);
+  background: linear-gradient(135deg, var(--sun), var(--gold-deep));
+  color: #2a1a08;
+  font-weight: 900;
+  font-size: 0.92rem;
+  padding: 9px 18px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 12px 26px -6px rgba(0, 0, 0, 0.65);
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.35s cubic-bezier(.2, .8, .2, 1);
+  pointer-events: none;
+}
+.search-spotlight-label::before { content: "👇 "; }
+.search-spotlight-label::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  transform: translateX(-50%);
+  border: 8px solid transparent;
+  border-top-color: var(--gold-deep);
+  border-bottom: 0;
+}
+.search-spotlight-label.on { opacity: 1; transform: translate(-50%, -100%) translateY(0); }
+.search-spotlight-label.below { transform: translate(-50%, 0) translateY(-10px); }
+.search-spotlight-label.below.on { transform: translate(-50%, 0) translateY(0); }
+.search-spotlight-label.below::before { content: "👆 "; }
+.search-spotlight-label.below::after {
+  bottom: auto;
+  top: -7px;
+  border-top: 0;
+  border-bottom: 8px solid var(--gold-deep);
+  border-top-color: transparent;
+}
+
+/* ------------------------- منيو أقسام فرحات (موبايل) ------------------------ */
+
+.sections-menu-list { gap: 8px; padding: 12px; }
+.smi-item {
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 14px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, background 0.25s ease;
+}
+.smi-item.open {
+  border-color: var(--olive);
+  box-shadow: 0 10px 22px -14px rgba(51, 82, 48, 0.55);
+  background: var(--cream-2);
+}
+.smi-item .smi-row { border-radius: 14px; }
+.smi-item.open .smi-row { background: transparent; }
+.smi-sub-inner { position: relative; padding: 0 12px; }
+.smi-item.open .smi-sub-inner { padding-bottom: 10px; }
+.smi-sub-inner::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 14px;
+  right: 25px;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(var(--olive), transparent);
+  opacity: 0.55;
+}
+.smi-subitem { padding-inline-start: 38px; position: relative; }
+.smi-subitem::before {
+  content: "";
+  position: absolute;
+  right: 22px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--olive);
+}
+.smi-subitem:hover::before { background: var(--sun); border-color: var(--sun); }
+
+/* --------------------------- حقول البيانات (فالديشن) ------------------------ */
+
+.cart-form input.valid, .cart-form select.valid {
+  border-color: var(--olive);
+  box-shadow: 0 0 0 3px rgba(125, 154, 90, 0.2);
+}
+.cart-form input.invalid { box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.15); }
+#custPhone { direction: ltr; text-align: right; letter-spacing: 0.5px; font-family: var(--font-numeric); }
+#custPhone::placeholder { direction: rtl; letter-spacing: 0; font-family: var(--font-body); }
+
+@media (prefers-reduced-motion: reduce) {
+  .badge-deal, .brand-logo-link::before, .brand-logo-link::after, .search-spotlight::after { animation: none; }
+  .deals-track, #sections .grid { scroll-behavior: auto; }
+}
+
+/* ---- تظبيطات على كروت سلايدر العروض والهيدر ---- */
+.deal-slide .card-price-row { margin-top: 2px; }
+.deal-slide .card-action, .deal-slide .weight-grid { margin-top: auto; }
+.deal-slide .card-media.placeholder {
+  background: linear-gradient(135deg, #6b2e1a 0%, #c0271a 100%);
+  font-size: 3.6rem;
+}
+.price-was { font-size: 0.82em; letter-spacing: 0.3px; }
+
+.main-nav a { padding: 8px 12px; }
+@media (max-width: 1360px) {
+  .main-nav a .nav-icon { display: none; }
+}
+
+/* السعر القديم: خط مائل بدل الشطب العادي عشان الأصفار تفضل واضحة */
+.price-was {
+  position: relative;
+  display: inline-block;
+  text-decoration: none;
+  font-size: 0.86em;
+  color: var(--ink-soft);
+}
+.price-was::after {
+  content: "";
+  position: absolute;
+  left: -3px;
+  right: -3px;
+  top: 52%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--deal-red);
+  transform: rotate(-9deg);
+}
+.brand-logo-link::after { opacity: 0.78; }
+
+/* ---- لوجو أكبر وأفخم ---- */
+.brand img { height: 56px; }
+.brand-logo-link::before {
+  inset: -18px -26px;
+  background: radial-gradient(closest-side, rgba(226, 173, 82, 0.55), rgba(226, 173, 82, 0.12) 60%, rgba(226, 173, 82, 0) 78%);
+}
+.brand-logo-link img { filter: drop-shadow(0 4px 10px rgba(173, 122, 46, 0.5)) saturate(1.12) contrast(1.05); }
+html[data-theme="dark"] .brand-logo-link img { filter: drop-shadow(0 0 12px rgba(230, 185, 104, 0.6)); }
+html[data-theme="dark"] .brand-logo-link::before { background: radial-gradient(closest-side, rgba(230, 185, 104, 0.4), rgba(230, 185, 104, 0) 72%); }
+@media (max-width: 720px) {
+  .brand img { height: 36px; }
 }

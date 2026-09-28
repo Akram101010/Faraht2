@@ -379,3 +379,16 @@ button, input, select, textarea { font-family: inherit; }
   .form-row { grid-template-columns: 1fr; }
   .stat-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+.linked-chip {
+  display: inline-block;
+  margin-inline-start: 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--forest);
+  background: var(--cream-2);
+  border: 1px solid var(--line);
+  padding: 2px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}

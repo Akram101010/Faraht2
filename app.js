@@ -2,6 +2,12 @@
 
 const cart = {}; // key: "sectionId|itemName" أو "sectionId|itemName|factor" لو الصنف بيتباع بالوزن
 
+// حالة العروض (لازم تتعرّف هنا فوق عشان buildSections بتستخدمها وقت التشغيل)
+let allDeals = [];
+let dealsTicker = null;
+let nextDealExpiry = 0;
+const DEAL_PSEUDO_SECTION = { id: "deals", title: "عروض اليوم", icon: "🔥", unit: "جنيه / قطعة" };
+
 const els = {
   sections: document.getElementById("sections"),
   nav: document.getElementById("mainNav"),
@@ -70,6 +76,7 @@ function sectionItemCount(section) {
 }
 
 function buildSections() {
+  applyDealsToCatalog(); // أي عرض شغال يبان على كارت المنتج نفسه في قسمه
   els.sections.innerHTML = ""; // عشان نقدر نعيد البناء بأمان لما بيانات Firestore توصل
   els.nav.innerHTML = "";
   els.chips.innerHTML = "";
@@ -123,6 +130,7 @@ function buildSections() {
     chip.innerHTML = `<span class="icon">${section.icon}</span><span>${section.title}</span>`;
     els.chips.appendChild(chip);
   });
+  enhanceGridSliders();
 }
 
 /* --------------------------- قسم بتبويبات (المزاج) ------------------------- */
@@ -150,6 +158,7 @@ function buildTabbedSection(section) {
     btn.addEventListener("click", () => {
       tabsBar.querySelectorAll(".mood-tab").forEach((b) => b.classList.toggle("active", b === btn));
       panels.querySelectorAll(".mood-panel").forEach((p) => p.classList.toggle("active", p.dataset.tab === tab.id));
+      requestAnimationFrame(updateSliderUIs);
     });
     tabsBar.appendChild(btn);
   });
@@ -204,17 +213,72 @@ function buildTabbedSection(section) {
   return wrap;
 }
 
-function buildCard(section, item) {
+/* ------------------------- تسعير العروض على الكروت ------------------------- */
+// أي صنف عليه عرض شغال بيكون عليه item.deal = { id, percent, endsAt(ms) }.
+// كل الأسعار (الكارت، أزرار الوزن، السلة) بتعدّي على الدوال دي، فالسعر بعد
+// الخصم بيتحسب في مكان واحد بس ومفيش احتمال يتلخبط.
+
+function hasActiveDeal(item) {
+  return !!(item && item.deal && item.deal.endsAt > Date.now());
+}
+function dealFactor(item) {
+  return hasActiveDeal(item) ? 1 - item.deal.percent / 100 : 1;
+}
+function basePriceOf(item, grind) {
+  return item.price + (grind ? grind.priceAdd || 0 : 0);
+}
+function effectivePrice(item, grind) {
+  return basePriceOf(item, grind) * dealFactor(item);
+}
+function cardPriceInner(item, grind) {
+  const now = Math.round(effectivePrice(item, grind));
+  if (hasActiveDeal(item)) {
+    const was = Math.round(basePriceOf(item, grind));
+    return `<s class="price-was">${money(was)}</s> ${money(now)} <span class="cur">ج.م</span>`;
+  }
+  return `${money(now)} <span class="cur">ج.م</span>`;
+}
+
+function formatRemaining(ms) {
+  const total = Math.max(0, Math.floor(ms / 1000));
+  const d = Math.floor(total / 86400);
+  const h = Math.floor((total % 86400) / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const sec = total % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d > 0 ? `${d} يوم ` : ""}${pad(h)}:${pad(m)}:${pad(sec)}`;
+}
+
+function dealTimerCompactHTML(item) {
+  return `<div class="card-deal-timer"><span>⏳ العرض ينتهي بعد</span><b class="cdt" data-ends="${item.deal.endsAt}">${formatRemaining(item.deal.endsAt - Date.now())}</b></div>`;
+}
+
+function dealTimerSegHTML(item) {
+  return `
+    <div class="deal-timer" data-ends="${item.deal.endsAt}">
+      <div class="dt-seg"><b class="dt-h">00</b><span>ساعة</span></div>
+      <div class="dt-seg"><b class="dt-m">00</b><span>دقيقة</span></div>
+      <div class="dt-seg"><b class="dt-s">00</b><span>ثانية</span></div>
+    </div>`;
+}
+
+function buildCard(section, item, opts = {}) {
   const card = document.createElement("article");
   card.className = "card";
-  card.dataset.searchId = `${section.id}::${item.name}`;
+  // كارت الشريحة في سكشن العروض ليه مفتاح بحث مختلف، عشان البحث يوصل
+  // لكارت المنتج الأصلي في قسمه مش لنسخة العروض
+  card.dataset.searchId = opts.slide ? `deal::${section.id}::${item.name}` : `${section.id}::${item.name}`;
+  const dealOn = hasActiveDeal(item);
+  if (dealOn) card.classList.add("card-has-deal");
 
   const bestsellerBadge = item.bestseller
     ? `<span class="badge-bestseller"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.7 7-6.3-3.8-6.3 3.8 1.7-7L2 9.2l7.1-.6L12 2z"/></svg>الأكثر طلبًا</span>`
     : "";
+  const dealBadge = dealOn ? `<span class="badge-deal">🔥 عرض −${money(item.deal.percent)}%</span>` : "";
+  const badges = `${bestsellerBadge}${dealBadge}`;
   const media = item.img
-    ? `<div class="card-media">${bestsellerBadge}<img src="${item.img}" alt="${item.name}" loading="lazy"></div>`
-    : `<div class="card-media placeholder">${bestsellerBadge}${section.icon}</div>`;
+    ? `<div class="card-media">${badges}<img src="${item.img}" alt="${item.name}" loading="lazy"></div>`
+    : `<div class="card-media placeholder">${badges}${section.icon}</div>`;
 
   if (item.customBox) {
     card.classList.add("card-custom-box");
@@ -232,6 +296,8 @@ function buildCard(section, item) {
     return card;
   }
 
+  const timerBlock = dealOn ? (opts.slide ? dealTimerSegHTML(item) : dealTimerCompactHTML(item)) : "";
+
   if (section.hasWeights) {
     const hasGrind = Array.isArray(section.grindOptions) && section.grindOptions.length > 1 && !item.noGrind;
     card.innerHTML = `
@@ -239,9 +305,11 @@ function buildCard(section, item) {
       <div class="card-body">
         <h3>${item.name}</h3>
         <div class="card-price-row">
-          <span class="card-price">${money(item.price)} <span style="font-size:.65em;font-weight:700;">ج.م</span></span>
+          <span class="card-price">${cardPriceInner(item, currentGrind(section, item))}</span>
           <span class="card-unit">${section.unit}</span>
         </div>
+        ${timerBlock}
+        ${dealOn && opts.slide ? `<div class="deal-cta-label">اختار الكمية واطلب العرض فورًا 👇</div>` : ""}
         ${hasGrind ? `<div class="grind-toggle"></div>` : ""}
         <div class="weight-grid" data-item="${item.name}"></div>
       </div>
@@ -257,9 +325,10 @@ function buildCard(section, item) {
       <div class="card-body">
         <h3>${item.name}</h3>
         <div class="card-price-row">
-          <span class="card-price">${money(item.price)} <span style="font-size:.65em;font-weight:700;">ج.م</span></span>
+          <span class="card-price">${cardPriceInner(item, null)}</span>
           <span class="card-unit">${section.unit}</span>
         </div>
+        ${timerBlock}
         <div class="card-action" data-key="${key}"></div>
       </div>
     `;
@@ -478,7 +547,10 @@ function buildSectionsMenu() {
         </div>
       `;
       item.querySelector(".smi-row").addEventListener("click", () => {
-        item.classList.toggle("open");
+        const willOpen = !item.classList.contains("open");
+        // أكورديون حقيقي: فتح قسم بيقفل اللي قبله، فمفيش قوايم تتزاحم فوق بعض
+        els.sectionsMenuList.querySelectorAll(".smi-item.open").forEach((o) => o.classList.remove("open"));
+        if (willOpen) item.classList.add("open");
       });
       item.querySelectorAll(".smi-subitem").forEach((btn) => {
         btn.addEventListener("click", () => goToMenuTarget(btn.dataset.section, btn.dataset.tab));
@@ -572,15 +644,18 @@ function buildSearchIndex() {
     targets.forEach(({ sub, parentTitle }) => {
       if (sub.comingSoon || !sub.items) return;
       sub.items.forEach((item) => {
+        const dealOn = hasActiveDeal(item);
         const priceLabel = item.customBox
           ? `من ${item.minWeight} لـ ${item.maxWeight} ${item.weightUnitLabel || "كيلو"}`
-          : `${money(item.price)} ج.م`;
+          : `${money(Math.round(effectivePrice(item, null)))} ج.م`;
         idx.push({
           name: item.name,
           img: item.img,
           sectionId: sub.id,
           pathLabel: parentTitle ? `${parentTitle} › ${sub.title}` : sub.title,
           priceLabel,
+          hasDeal: dealOn,
+          dealPercent: dealOn ? item.deal.percent : 0,
           searchNorm: normalizeArabic(item.name),
         });
       });
@@ -606,7 +681,7 @@ function renderSearchResults(list, rawQuery) {
     row.innerHTML = `
       <div class="thumb">${entry.img ? `<img src="${entry.img}" alt="${entry.name}">` : "🛍️"}</div>
       <div class="sr-info">
-        <h4>${entry.name}</h4>
+        <h4>${entry.name}${entry.hasDeal ? ` <span class="sr-deal">🔥 عرض −${money(entry.dealPercent)}%</span>` : ""}</h4>
         <div class="sr-path">${entry.pathLabel}</div>
       </div>
       <div class="sr-price">${entry.priceLabel}</div>
@@ -614,6 +689,75 @@ function renderSearchResults(list, rawQuery) {
     row.addEventListener("click", () => goToSearchResult(entry));
     els.searchResults.appendChild(row);
   });
+}
+
+// الإضاءة على المنتج اللي العميل دوّر عليه: بنعتّم الصفحة كلها ونسيب كارت
+// المنتج منوّر بإطار دهبي نابض وعلامة واضحة فوقه، لحد ما العميل يدوس في أي
+// مكان أو يعدّي حوالي 5 ثواني. الطبقة دي خارج الكارت فمفيش قص أو تداخل.
+let spotlightState = null;
+
+function endSpotlight() {
+  if (!spotlightState) return;
+  const st = spotlightState;
+  spotlightState = null;
+  cancelAnimationFrame(st.raf);
+  clearTimeout(st.timer);
+  window.removeEventListener("pointerdown", st.onDown, true);
+  document.removeEventListener("keydown", st.onKey, true);
+  st.ring.classList.remove("on");
+  st.label.classList.remove("on");
+  st.card.classList.remove("search-highlight");
+  setTimeout(() => { st.ring.remove(); st.label.remove(); }, 450);
+}
+
+function startSpotlight(card) {
+  endSpotlight();
+  const ring = document.createElement("div");
+  ring.className = "search-spotlight";
+  const label = document.createElement("div");
+  label.className = "search-spotlight-label";
+  label.textContent = "ده المنتج اللي دورت عليه";
+  document.body.append(ring, label);
+
+  const place = () => {
+    const r = card.getBoundingClientRect();
+    const pad = 7;
+    ring.style.left = `${r.left - pad}px`;
+    ring.style.top = `${r.top - pad}px`;
+    ring.style.width = `${r.width + pad * 2}px`;
+    ring.style.height = `${r.height + pad * 2}px`;
+    const above = r.top > 78;
+    label.classList.toggle("below", !above);
+    label.style.left = `${Math.min(Math.max(r.left + r.width / 2, 90), window.innerWidth - 90)}px`;
+    label.style.top = `${above ? r.top - pad - 10 : r.bottom + pad + 10}px`;
+  };
+  place();
+
+  const onDown = () => endSpotlight();
+  const onKey = (e) => { if (e.key === "Escape") endSpotlight(); };
+  const loop = () => {
+    place();
+    if (spotlightState) spotlightState.raf = requestAnimationFrame(loop);
+  };
+  spotlightState = { ring, label, card, raf: requestAnimationFrame(loop), timer: setTimeout(endSpotlight, 5500), onDown, onKey };
+  window.addEventListener("pointerdown", onDown, true);
+  document.addEventListener("keydown", onKey, true);
+  card.classList.add("search-highlight");
+  requestAnimationFrame(() => { ring.classList.add("on"); label.classList.add("on"); });
+}
+
+// بنستنى السكرول يهدى (الكارت يبطّل يتحرك) قبل ما نضيّء عليه
+function whenScrollSettles(card, cb) {
+  let lastTop = null, lastLeft = null, stable = 0, frames = 0;
+  const step = () => {
+    const r = card.getBoundingClientRect();
+    if (lastTop !== null && Math.abs(r.top - lastTop) < 0.5 && Math.abs(r.left - lastLeft) < 0.5) stable++;
+    else stable = 0;
+    lastTop = r.top; lastLeft = r.left; frames++;
+    if (stable >= 8 || frames > 150) cb();
+    else requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
 }
 
 function goToSearchResult(entry) {
@@ -625,22 +769,8 @@ function goToSearchResult(entry) {
   requestAnimationFrame(() => {
     const card = document.querySelector(`.card[data-search-id="${cssEscape(entry.sectionId + "::" + entry.name)}"]`);
     if (card) {
-      card.scrollIntoView({ behavior: "smooth", block: "center" });
-      setTimeout(() => {
-        card.classList.add("search-highlight");
-        const media = card.querySelector(".card-media");
-        let tag = null;
-        if (media) {
-          tag = document.createElement("span");
-          tag.className = "search-found-tag";
-          tag.textContent = "🔍 ده اللي دورت عليه";
-          media.appendChild(tag);
-        }
-        setTimeout(() => {
-          card.classList.remove("search-highlight");
-          if (tag) tag.remove();
-        }, 2400);
-      }, 380);
+      card.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      setTimeout(() => whenScrollSettles(card, () => startSpotlight(card)), 120);
     } else {
       const topId = tabParentSectionId[entry.sectionId] || entry.sectionId;
       const topSection = document.getElementById(topId);
@@ -710,15 +840,11 @@ function buildGrindToggle(container, section, item) {
       grid.innerHTML = "";
       grid.appendChild(buildWeightGrid(section, item, currentGrind(section, item)));
       const priceEl = card.querySelector(".card-price");
-      priceEl.innerHTML = `${money(effectivePrice(item, currentGrind(section, item)))} <span style="font-size:.65em;font-weight:700;">ج.م</span>`;
+      priceEl.innerHTML = cardPriceInner(item, currentGrind(section, item));
     });
   });
 
   refreshActive();
-}
-
-function effectivePrice(item, grind) {
-  return item.price + (grind ? grind.priceAdd || 0 : 0);
 }
 
 function effectiveName(item, grind) {
@@ -769,8 +895,9 @@ function changeWeightQty(section, item, w, dir, grind) {
   const label = weightLabelFor(w, unitNoun);
 
   if (!cart[key]) {
-    cart[key] = { name, price: unitPrice, weightLabel: label, section: section.title, img: item.img, qty: 0 };
+    cart[key] = { name, weightLabel: label, section: section.title, img: item.img, qty: 0 };
   }
+  applyLinePricing(cart[key], item, unitPrice, Math.round(basePriceOf(item, grind) * w.factor));
   cart[key].qty += dir;
   if (cart[key].qty <= 0) delete cart[key];
 
@@ -782,10 +909,46 @@ function changeWeightQty(section, item, w, dir, grind) {
   if (dir > 0) showToast(`✓ اتضاف ${name} (${label}) للسلة`);
 }
 
+// بنحدّث سعر السطر في كل إضافة، فلو العرض بدأ أو خلص بين إضافة والتانية
+// السطر ياخد السعر الصح. وبنحفظ السعر الأصلي ووقت انتهاء العرض عشان لو
+// العرض خلص والعميل لسه في السلة، السعر يرجع للعادي تلقائي.
+function applyLinePricing(line, item, unitPrice, basePrice) {
+  line.price = unitPrice;
+  if (hasActiveDeal(item)) {
+    line.basePrice = basePrice;
+    line.dealEndsAt = item.deal.endsAt;
+    line.dealPercent = item.deal.percent;
+  } else {
+    delete line.basePrice;
+    delete line.dealEndsAt;
+    delete line.dealPercent;
+  }
+}
+
+function reconcileCartDeals() {
+  const now = Date.now();
+  const expired = [];
+  Object.values(cart).forEach((l) => {
+    if (l.dealEndsAt && l.dealEndsAt <= now) {
+      l.price = l.basePrice;
+      expired.push(l.name);
+      delete l.basePrice;
+      delete l.dealEndsAt;
+      delete l.dealPercent;
+    }
+  });
+  if (expired.length) {
+    refreshCartUI();
+    showToast(`⏰ انتهى عرض ${expired[0]}${expired.length > 1 ? " وغيره" : ""}، واتحسب بالسعر العادي`);
+  }
+  return expired.length > 0;
+}
+
 function renderCardAction(slot, section, item, key) {
+  slot._ctx = { section, item, key };
   const inCart = cart[key];
   if (!inCart) {
-    slot.innerHTML = `<button class="card-add" type="button">${addIcon()} أضف للسلة</button>`;
+    slot.innerHTML = `<button class="card-add" type="button">${hasActiveDeal(item) ? "🔥 اطلب العرض" : `${addIcon()} أضف للسلة`}</button>`;
     slot.querySelector("button").addEventListener("click", () => {
       changeQty(section, item, key, 1);
     });
@@ -806,8 +969,9 @@ function renderCardAction(slot, section, item, key) {
 
 function changeQty(section, item, key, dir) {
   if (!cart[key]) {
-    cart[key] = { name: item.name, price: item.price, unit: section.unit, section: section.title, img: item.img, qty: 0 };
+    cart[key] = { name: item.name, unit: section.unit, section: section.title, img: item.img, qty: 0 };
   }
+  applyLinePricing(cart[key], item, Math.round(effectivePrice(item, null)), Math.round(basePriceOf(item, null)));
   cart[key].qty += dir;
   if (cart[key].qty <= 0) delete cart[key];
 
@@ -862,6 +1026,7 @@ function refreshCartUI() {
       <div class="info">
         <h4>${line.name}${line.weightLabel ? ` <span class="line-weight">— ${line.weightLabel}</span>` : ""}</h4>
         ${line.composition ? `<div class="line-composition">${line.composition}</div>` : ""}
+        ${line.dealPercent ? `<div class="line-deal">🔥 عرض −${money(line.dealPercent)}% <s>${money(line.basePrice * line.qty)} ج.م</s></div>` : ""}
         <div class="line-price">${money(line.price)} ج.م × ${line.qty} = <strong>${money(line.price * line.qty)} ج.م</strong></div>
       </div>
       <div class="qty-row">
@@ -910,17 +1075,8 @@ function rebuildAllCardActions() {
   // بتاعها مباشرة، فمش محتاجين نعيد حساب الاسم الفعلي (مع/من غير التحويج) هنا
   document.querySelectorAll(".weight-btn").forEach(refreshWeightBadge);
 
-  STORE.sections.forEach((section) => {
-    const targets = section.tabs ? section.tabs : [section];
-    targets.forEach((sub) => {
-      if (sub.hasWeights) return;
-      sub.items.forEach((item) => {
-        const key = cartKey(sub.id, item.name);
-        document.querySelectorAll(`.card-action[data-key="${cssEscape(key)}"]`).forEach((slot) => {
-          renderCardAction(slot, sub, item, key);
-        });
-      });
-    });
+  document.querySelectorAll(".card-action").forEach((slot) => {
+    if (slot._ctx) renderCardAction(slot, slot._ctx.section, slot._ctx.item, slot._ctx.key);
   });
 }
 
@@ -999,7 +1155,8 @@ function buildOrderMessage() {
     msg += `*${sectionName}*\n`;
     items.forEach((l) => {
       const weightPart = l.weightLabel ? ` (${l.weightLabel})` : "";
-      msg += `• ${l.name}${weightPart} × ${l.qty} — ${money(l.price * l.qty)} ج.م\n`;
+      const dealPart = l.dealPercent ? ` 🔥(عرض −${l.dealPercent}%)` : "";
+      msg += `• ${l.name}${weightPart} × ${l.qty} — ${money(l.price * l.qty)} ج.م${dealPart}\n`;
       if (l.composition) msg += `   🍫 ${l.composition}\n`;
     });
     msg += `\n`;
@@ -1008,7 +1165,7 @@ function buildOrderMessage() {
   msg += `*الإجمالي: ${money(cartTotalValue())} ج.م*\n`;
 
   const name = els.custName.value.trim();
-  const phone = els.custPhone.value.trim();
+  const phone = cleanPhone(els.custPhone.value);
   const address = els.custAddress.value.trim();
   const note = els.custNote.value.trim();
   const region = els.custRegion.value;
@@ -1032,6 +1189,7 @@ function buildOrderMessage() {
 
 els.confirmBtn.addEventListener("click", () => {
   if (cartCount() === 0) return;
+  reconcileCartDeals(); // لو عرض خلص وقته والعميل لسه في السلة، السعر يرجع للعادي قبل الإرسال
   if (!validateCustomerFields()) return;
   const text = encodeURIComponent(buildOrderMessage());
   const url = `https://wa.me/${STORE.whatsapp}?text=${text}`;
@@ -1051,13 +1209,14 @@ function logOrderToFirestore() {
     weightLabel: l.weightLabel || null,
     composition: l.composition || null,
     section: l.section,
+    dealPercent: l.dealPercent || null,
   }));
   window.Farahat
     .addOrder({
       items,
       total: cartTotalValue(),
       customerName: els.custName.value.trim(),
-      customerPhone: els.custPhone.value.trim(),
+      customerPhone: cleanPhone(els.custPhone.value),
       address: els.custAddress.value.trim(),
       note: els.custNote.value.trim(),
       region: els.custRegion.value,
@@ -1066,59 +1225,111 @@ function logOrderToFirestore() {
     .catch((e) => console.warn("Farahat: تعذّر تسجيل الطلب في لوحة التحكم.", e));
 }
 
+/* ---------------------- التحقق المنطقي من بيانات العميل --------------------- */
+// الاسم لازم يبقى اسم حقيقي (كلمتين حروف بس)، والموبايل لازم رقم مصري صحيح
+// (11 رقم بيبدأ بـ 010/011/012/015). الأرقام العربي (٠١٢) بتتحوّل لإنجليزي
+// لوحدها، و+20 بتتحوّل لـ 0، وأي حرف زيادة في الرقم بيتشال وهو بيكتب.
+
+function toLatinDigits(str) {
+  return str
+    .replace(/[٠-٩]/g, (d) => "٠١٢٣٤٥٦٧٨٩".indexOf(d))
+    .replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+}
+
+function cleanPhone(raw) {
+  let d = toLatinDigits(raw || "").replace(/[^0-9+]/g, "");
+  if (d.startsWith("+20")) d = "0" + d.slice(3);
+  else if (d.startsWith("0020")) d = "0" + d.slice(4);
+  else if (/^20(1[0125])/.test(d) && d.length >= 12) d = "0" + d.slice(2);
+  return d.replace(/\D/g, "").slice(0, 11);
+}
+
+function checkName(raw) {
+  const name = (raw || "").replace(/\s+/g, " ").trim();
+  if (!name) return "من فضلك اكتب اسمك";
+  if (/[0-9٠-٩۰-۹]/.test(name)) return "الاسم مينفعش يحتوي على أرقام";
+  if (/[^\u0600-\u06FFa-zA-Z\s.'-]/.test(name)) return "الاسم لازم يكون حروف بس";
+  const words = name.split(" ").filter((w) => w.replace(/[^\u0600-\u06FFa-zA-Z]/g, "").length >= 2);
+  if (words.length < 2) return "اكتب اسمك الأول والأخير (كلمتين على الأقل)";
+  if (/(.)\1{3,}/.test(name)) return "الاسم شكله مش صحيح، اكتبه تاني";
+  return "";
+}
+
+function checkPhone(raw) {
+  const d = cleanPhone(raw);
+  if (!d) return "من فضلك اكتب رقم الموبايل";
+  if (!/^01[0125]/.test(d)) return "الرقم لازم يبدأ بـ 010 أو 011 أو 012 أو 015";
+  if (d.length < 11) return `الرقم ناقص — لسه ${11 - d.length} أرقام`;
+  return "";
+}
+
+function checkAddress(raw) {
+  const a = (raw || "").replace(/\s+/g, " ").trim();
+  if (!a) return "من فضلك اكتب عنوانك";
+  if (a.length < 6 || !/[\u0600-\u06FFa-zA-Z]/.test(a)) return "اكتب عنوانك بالتفصيل (المنطقة واسم الشارع)";
+  return "";
+}
+
+const FIELD_RULES = [
+  { el: els.custName, errId: "nameError", check: checkName },
+  { el: els.custPhone, errId: "phoneError", check: checkPhone },
+  { el: els.custAddress, errId: "addressError", check: checkAddress },
+];
+
+function showFieldState(rule, message, { silentIfEmpty = false } = {}) {
+  const errEl = document.getElementById(rule.errId);
+  const empty = !rule.el.value.trim();
+  if (message && !(silentIfEmpty && empty)) {
+    rule.el.classList.add("invalid");
+    rule.el.classList.remove("valid");
+    errEl.textContent = message;
+    errEl.classList.add("visible");
+  } else {
+    rule.el.classList.remove("invalid");
+    errEl.classList.remove("visible");
+    rule.el.classList.toggle("valid", !message);
+  }
+}
+
 function validateCustomerFields() {
   let ok = true;
-  const nameEl = els.custName;
-  const phoneEl = els.custPhone;
-  const addrEl = els.custAddress;
-  const nameErr = document.getElementById("nameError");
-  const phoneErr = document.getElementById("phoneError");
-  const addrErr = document.getElementById("addressError");
-
-  if (!nameEl.value.trim()) {
-    nameEl.classList.add("invalid");
-    nameErr.classList.add("visible");
-    ok = false;
-  } else {
-    nameEl.classList.remove("invalid");
-    nameErr.classList.remove("visible");
-  }
-
-  // رقم موبايل مصري: يبدأ بـ 01 وطوله 11 رقم (أرقام بس، تسمح بمسافات/شرط بينهم)
-  const phoneDigits = phoneEl.value.replace(/[^0-9]/g, "");
-  if (!/^01[0-9]{9}$/.test(phoneDigits)) {
-    phoneEl.classList.add("invalid");
-    phoneErr.classList.add("visible");
-    ok = false;
-  } else {
-    phoneEl.classList.remove("invalid");
-    phoneErr.classList.remove("visible");
-  }
-
-  if (!addrEl.value.trim()) {
-    addrEl.classList.add("invalid");
-    addrErr.classList.add("visible");
-    ok = false;
-  } else {
-    addrEl.classList.remove("invalid");
-    addrErr.classList.remove("visible");
-  }
-
+  FIELD_RULES.forEach((rule) => {
+    const msg = rule.check(rule.el.value);
+    showFieldState(rule, msg);
+    if (msg) ok = false;
+  });
   if (!ok) {
     const firstInvalid = document.querySelector(".cart-form .invalid");
     if (firstInvalid) firstInvalid.focus();
-    showToast("من فضلك اكتب اسمك ورقم موبايلك وعنوانك قبل تأكيد الطلب");
+    showToast("راجع البيانات المكتوبة بالأحمر قبل تأكيد الطلب");
   }
   return ok;
 }
 
-[els.custName, els.custPhone, els.custAddress].forEach((input) => {
-  input.addEventListener("input", () => {
-    if (input.value.trim()) {
-      input.classList.remove("invalid");
-      const errId = input === els.custName ? "nameError" : input === els.custPhone ? "phoneError" : "addressError";
-      document.getElementById(errId).classList.remove("visible");
+els.custPhone.setAttribute("autocomplete", "tel");
+els.custPhone.setAttribute("maxlength", "16");
+els.custName.setAttribute("autocomplete", "name");
+els.custAddress.setAttribute("autocomplete", "street-address");
+
+FIELD_RULES.forEach((rule) => {
+  rule.el.addEventListener("input", () => {
+    if (rule.el === els.custPhone) {
+      // بنشيل أي حاجة مش رقم أثناء الكتابة ونحوّل الأرقام العربي
+      const cleaned = toLatinDigits(rule.el.value).replace(/[^0-9+\s]/g, "");
+      if (cleaned !== rule.el.value) rule.el.value = cleaned;
     }
+    // لو الحقل كان فيه خطأ أو العميل كتب كفاية، نراجع وهو بيكتب
+    const msg = rule.check(rule.el.value);
+    if (rule.el.classList.contains("invalid") || !msg) showFieldState(rule, msg);
+    else rule.el.classList.remove("valid");
+  });
+  rule.el.addEventListener("blur", () => {
+    if (rule.el === els.custPhone) {
+      const d = cleanPhone(rule.el.value);
+      if (d) rule.el.value = d;
+    }
+    if (rule.el === els.custName) rule.el.value = rule.el.value.replace(/\s+/g, " ").trim();
+    showFieldState(rule, rule.check(rule.el.value), { silentIfEmpty: true });
   });
 });
 
@@ -1283,100 +1494,260 @@ function mergeLiveProducts(products) {
   return changed;
 }
 
-/* -------------------------------- عروض اليوم ------------------------------- */
+/* ------------------------------- سلايدر عام ------------------------------- */
+// بيتستخدم في سلايدر العروض، وفي شبكات المنتجات على الموبايل (سحب أفقي بدل
+// الطول الكبير). كله بيعتمد على scroll-snap بتاع المتصفح فالحركة ناعمة وطبيعية.
 
-let activeDeals = [];
-let dealsCountdownTimer = null;
+function isRtl(el) { return getComputedStyle(el).direction === "rtl"; }
 
-function computeDealFinalPrice(deal) {
-  return Math.round((deal.originalPrice || 0) * (1 - (deal.discountPercent || 0) / 100));
+function sliderMove(track, dir) {
+  const step = Math.max(160, track.clientWidth * 0.85);
+  track.scrollBy({ left: (isRtl(track) ? -1 : 1) * dir * step, behavior: "smooth" });
 }
+
+function sliderMetrics(track) {
+  const max = Math.max(0, track.scrollWidth - track.clientWidth);
+  return { max, pos: Math.min(max, Math.abs(track.scrollLeft)) };
+}
+
+function updateSliderUIs() {
+  document.querySelectorAll(".gs-controls").forEach((ctl) => {
+    const grid = ctl.previousElementSibling;
+    if (!grid) return;
+    const { max, pos } = sliderMetrics(grid);
+    const overflow = max > 6 && grid.clientWidth > 0;
+    ctl.hidden = !overflow;
+    if (!overflow) return;
+    const fill = ctl.querySelector(".gs-progress span");
+    const widthPct = Math.max(14, (grid.clientWidth / grid.scrollWidth) * 100);
+    fill.style.width = `${widthPct}%`;
+    fill.style.right = `${(pos / max) * (100 - widthPct)}%`;
+    ctl.querySelector(".gs-prev").disabled = pos < 4;
+    ctl.querySelector(".gs-next").disabled = pos > max - 4;
+  });
+  const dealsTrack = document.getElementById("dealsGrid");
+  if (dealsTrack && dealsTrack._update) dealsTrack._update();
+}
+
+function enhanceGridSliders() {
+  document.querySelectorAll("#sections .grid").forEach((grid) => {
+    const next = grid.nextElementSibling;
+    if (next && next.classList.contains("gs-controls")) return;
+    const ctl = document.createElement("div");
+    ctl.className = "gs-controls";
+    ctl.hidden = true;
+    ctl.innerHTML = `
+      <button type="button" class="gs-btn gs-prev" aria-label="السابق"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <div class="gs-mid"><span class="gs-hint">اسحب لمزيد من المنتجات</span><div class="gs-progress"><span></span></div></div>
+      <button type="button" class="gs-btn gs-next" aria-label="التالي"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    `;
+    grid.after(ctl);
+    ctl.querySelector(".gs-prev").addEventListener("click", () => sliderMove(grid, -1));
+    ctl.querySelector(".gs-next").addEventListener("click", () => sliderMove(grid, 1));
+    let raf = 0;
+    grid.addEventListener("scroll", () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(updateSliderUIs);
+    }, { passive: true });
+  });
+  requestAnimationFrame(updateSliderUIs);
+}
+window.addEventListener("resize", () => requestAnimationFrame(updateSliderUIs));
+
+function initDealsSlider() {
+  const slider = document.getElementById("dealsSlider");
+  const track = document.getElementById("dealsGrid");
+  if (!slider || !track) return;
+  const prev = slider.querySelector(".ds-prev");
+  const next = slider.querySelector(".ds-next");
+  const dots = slider.querySelector(".ds-dots");
+  const slides = [...track.children];
+
+  dots.innerHTML = slides.map((_, i) => `<button type="button" class="ds-dot" aria-label="العرض ${i + 1}"></button>`).join("");
+  dots.hidden = slides.length <= 1;
+  dots.querySelectorAll(".ds-dot").forEach((d, i) => {
+    d.addEventListener("click", () => slides[i].scrollIntoView({ behavior: "smooth", inline: "start", block: "nearest" }));
+  });
+
+  track._update = () => {
+    const list = [...track.children];
+    if (!list.length) return;
+    const tr = track.getBoundingClientRect();
+    const rtl = isRtl(track);
+    const { max, pos } = sliderMetrics(track);
+    let best = 0, bestDist = Infinity;
+    list.forEach((c, i) => {
+      const r = c.getBoundingClientRect();
+      const dist = rtl ? Math.abs(tr.right - r.right) : Math.abs(r.left - tr.left);
+      if (dist < bestDist) { bestDist = dist; best = i; }
+      const visible = Math.min(r.right, tr.right) - Math.max(r.left, tr.left);
+      c.classList.toggle("in-view", visible >= r.width * 0.6);
+    });
+    dots.querySelectorAll(".ds-dot").forEach((d, i) => d.classList.toggle("active", i === best));
+    const noOverflow = max <= 6;
+    prev.hidden = next.hidden = noOverflow;
+    prev.disabled = pos < 4;
+    next.disabled = pos > max - 4;
+  };
+
+  if (!track._init) {
+    track._init = true;
+    prev.addEventListener("click", () => sliderMove(track, -1));
+    next.addEventListener("click", () => sliderMove(track, 1));
+    let raf = 0;
+    track.addEventListener("scroll", () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => track._update());
+    }, { passive: true });
+  }
+  track.scrollLeft = 0;
+  requestAnimationFrame(() => track._update());
+}
+
+/* -------------------------------- عروض اليوم ------------------------------- */
+// العرض ممكن يكون على منتج موجود في الموقع (وقتها كارت المنتج نفسه في قسمه
+// بيتغير: بادچ "عرض" + السعر القديم مشطوب + السعر الجديد + عدّاد)، أو عرض
+// مستقل مش موجود في الكتالوج. الاتنين بيظهروا في سلايدر "عروض اليوم" وفيه
+// أزرار الطلب المباشر. وأول ما وقت العرض يخلص كل حاجة بترجع لطبيعتها لوحدها.
 
 function dealEndsAtDate(deal) {
   if (deal.endsAt && typeof deal.endsAt.toDate === "function") return deal.endsAt.toDate();
   return new Date(deal.endsAt);
 }
+function dealEndsMs(deal) { return dealEndsAtDate(deal).getTime(); }
+function liveDeals() {
+  const now = Date.now();
+  return allDeals.filter((d) => d.active !== false && dealEndsMs(d) > now);
+}
+
+function findItemForDeal(deal) {
+  if (!deal.sourceName) return null;
+  const subId = deal.sourceTabId || deal.sourceSectionId;
+  for (const section of STORE.sections) {
+    const subs = section.tabs ? section.tabs : [section];
+    for (const sub of subs) {
+      if (sub.id !== subId) continue;
+      const item = (sub.items || []).find((i) => i.name === deal.sourceName);
+      if (item) return { sub, item };
+    }
+  }
+  return null;
+}
+
+// بتربط كل عرض شغال بالصنف بتاعه في الكتالوج، وبترجّع الأصناف اللي حالتها اتغيرت
+function applyDealsToCatalog() {
+  const map = new Map();
+  liveDeals().forEach((deal) => {
+    const found = findItemForDeal(deal);
+    if (found && !map.has(found.item)) {
+      map.set(found.item, { id: deal.id, percent: deal.discountPercent, endsAt: dealEndsMs(deal) });
+    }
+  });
+  const sig = (d) => (d ? `${d.id}|${d.percent}|${d.endsAt}` : "");
+  const changed = [];
+  STORE.sections.forEach((section) => {
+    (section.tabs ? section.tabs : [section]).forEach((sub) => {
+      (sub.items || []).forEach((item) => {
+        const nextDeal = map.get(item) || null;
+        if (sig(item.deal) !== sig(nextDeal)) {
+          item.deal = nextDeal;
+          changed.push({ sub, item });
+        }
+      });
+    });
+  });
+  const ends = liveDeals().map(dealEndsMs);
+  nextDealExpiry = ends.length ? Math.min(...ends) : 0;
+  return changed;
+}
+
+function replaceChangedCards(changed) {
+  changed.forEach(({ sub, item }) => {
+    const old = document.querySelector(`.card[data-search-id="${cssEscape(sub.id + "::" + item.name)}"]`);
+    if (old) old.replaceWith(buildCard(sub, item));
+  });
+  if (changed.length) requestAnimationFrame(updateSliderUIs);
+}
+
+function syncDeals() {
+  const changed = applyDealsToCatalog();
+  replaceChangedCards(changed);
+  renderDeals();
+  searchIndex = buildSearchIndex();
+  ensureDealsTicker();
+}
 
 function loadDeals() {
   if (!window.Farahat || !window.Farahat.fetchDeals) return;
   window.Farahat.fetchDeals()
-    .then((list) => {
-      const now = Date.now();
-      activeDeals = list.filter((d) => d.active !== false && dealEndsAtDate(d).getTime() > now);
-      renderDeals();
-      if (activeDeals.length > 0) startDealsCountdownLoop();
-    })
+    .then((list) => { allDeals = list; syncDeals(); })
     .catch((e) => console.warn("Farahat: تعذّر تحميل عروض اليوم.", e));
 }
 
 function renderDeals() {
-  const grid = document.getElementById("dealsGrid");
+  const track = document.getElementById("dealsGrid");
+  const slider = document.getElementById("dealsSlider");
   const empty = document.getElementById("dealsEmpty");
   const countEl = document.getElementById("dealsCount");
-  if (!grid || !empty) return;
+  if (!track || !slider || !empty) return;
 
-  if (activeDeals.length === 0) {
-    grid.hidden = true;
-    grid.innerHTML = "";
+  const deals = liveDeals();
+  track.innerHTML = "";
+  if (deals.length === 0) {
+    slider.hidden = true;
     empty.hidden = false;
     if (countEl) countEl.textContent = "";
     return;
   }
 
-  empty.hidden = true;
-  grid.hidden = false;
-  if (countEl) countEl.textContent = `${activeDeals.length} عرض`;
+  deals.forEach((deal) => {
+    const found = findItemForDeal(deal);
+    let sub, item;
+    if (found && found.item.deal && found.item.deal.id === deal.id) {
+      sub = found.sub;
+      item = found.item;
+    } else {
+      sub = DEAL_PSEUDO_SECTION;
+      item = {
+        name: deal.name,
+        price: deal.originalPrice,
+        img: deal.img,
+        deal: { id: deal.id, percent: deal.discountPercent, endsAt: dealEndsMs(deal) },
+      };
+    }
+    const card = buildCard(sub, item, { slide: true });
+    card.classList.add("deal-slide");
+    track.appendChild(card);
+  });
 
-  grid.innerHTML = activeDeals.map((deal, i) => {
-    const finalPrice = computeDealFinalPrice(deal);
-    return `
-      <div class="deal-card">
-        <div class="deal-media">
-          ${deal.img ? `<img src="${deal.img}" alt="${deal.name}">` : ""}
-          <span class="deal-discount-badge">خصم ${money(deal.discountPercent)}%</span>
-        </div>
-        <div class="deal-body">
-          <h3>${deal.name}</h3>
-          <div class="deal-price-row">
-            <span class="deal-original">${money(deal.originalPrice)} ج.م</span>
-            <span class="deal-now">${money(finalPrice)} ج.م</span>
-          </div>
-          <div class="deal-timer" data-ends="${dealEndsAtDate(deal).getTime()}" data-index="${i}">
-            <div class="dt-seg"><b class="dt-h">00</b><span>ساعة</span></div>
-            <div class="dt-seg"><b class="dt-m">00</b><span>دقيقة</span></div>
-            <div class="dt-seg"><b class="dt-s">00</b><span>ثانية</span></div>
-          </div>
-        </div>
-      </div>
-    `;
-  }).join("");
+  empty.hidden = true;
+  slider.hidden = false;
+  if (countEl) countEl.textContent = `${deals.length} ${deals.length === 1 ? "عرض شغال" : "عروض شغالة"}`;
+  initDealsSlider();
+  tickDeals();
 }
 
-function startDealsCountdownLoop() {
-  clearInterval(dealsCountdownTimer);
-  dealsCountdownTimer = setInterval(() => {
-    const grid = document.getElementById("dealsGrid");
-    if (!grid) { clearInterval(dealsCountdownTimer); return; }
-    let anyExpired = false;
-    grid.querySelectorAll(".deal-timer").forEach((timerEl) => {
-      const endsAt = Number(timerEl.dataset.ends);
-      const diff = endsAt - Date.now();
-      if (diff <= 0) { anyExpired = true; return; }
-      const pad = (n) => String(n).padStart(2, "0");
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      timerEl.querySelector(".dt-h").textContent = pad(h);
-      timerEl.querySelector(".dt-m").textContent = pad(m);
-      timerEl.querySelector(".dt-s").textContent = pad(s);
-    });
-    if (anyExpired) {
-      const now = Date.now();
-      activeDeals = activeDeals.filter((d) => dealEndsAtDate(d).getTime() > now);
-      renderDeals();
-      if (activeDeals.length === 0) clearInterval(dealsCountdownTimer);
-    }
-  }, 1000);
+function ensureDealsTicker() {
+  const need = nextDealExpiry > 0 || Object.values(cart).some((l) => l.dealEndsAt);
+  if (need && !dealsTicker) dealsTicker = setInterval(tickDeals, 1000);
+  if (!need && dealsTicker) { clearInterval(dealsTicker); dealsTicker = null; }
+}
+
+function tickDeals() {
+  const now = Date.now();
+  const pad = (n) => String(n).padStart(2, "0");
+  document.querySelectorAll(".cdt[data-ends]").forEach((el) => {
+    el.textContent = formatRemaining(Number(el.dataset.ends) - now);
+  });
+  document.querySelectorAll(".deal-timer[data-ends]").forEach((el) => {
+    const diff = Math.max(0, Number(el.dataset.ends) - now);
+    el.querySelector(".dt-h").textContent = pad(Math.floor(diff / 3600000));
+    el.querySelector(".dt-m").textContent = pad(Math.floor((diff % 3600000) / 60000));
+    el.querySelector(".dt-s").textContent = pad(Math.floor((diff % 60000) / 1000));
+  });
+  if (nextDealExpiry && now >= nextDealExpiry) syncDeals();
+  reconcileCartDeals();
+  if (!nextDealExpiry && !Object.values(cart).some((l) => l.dealEndsAt)) ensureDealsTicker();
 }
 
 window.addEventListener("farahat-products-ready", (e) => {
@@ -1388,6 +1759,7 @@ window.addEventListener("farahat-products-ready", (e) => {
   setupScrollReveal();
   setupNavScrollHint();
   rebuildAllCardActions();
+  syncDeals();
 });
 
 if (window.Farahat) {
@@ -1405,3 +1777,33 @@ if (window.Farahat) {
     loadDeals();
   });
 }
+
+
+/* ------------------------------ الوضع الداكن / الفاتح ---------------------- */
+// الاختيار بيتحفظ في المتصفح، ولو العميل مااختارش حاجة بنتبع إعداد جهازه.
+
+(function setupThemeToggle() {
+  const btn = document.getElementById("themeToggleBtn");
+  const root = document.documentElement;
+  const meta = document.querySelector('meta[name="theme-color"]');
+  const apply = (mode) => {
+    root.setAttribute("data-theme", mode);
+    if (meta) meta.setAttribute("content", mode === "dark" ? "#12160e" : "#faf5ea");
+  };
+  apply(root.getAttribute("data-theme") === "dark" ? "dark" : "light");
+  if (btn) {
+    btn.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      root.classList.add("theme-anim");
+      apply(next);
+      try { localStorage.setItem("farahat_theme", next); } catch (e) { /* تجاهل */ }
+      setTimeout(() => root.classList.remove("theme-anim"), 450);
+    });
+  }
+  const mq = window.matchMedia("(prefers-color-scheme: dark)");
+  mq.addEventListener && mq.addEventListener("change", (e) => {
+    let saved = null;
+    try { saved = localStorage.getItem("farahat_theme"); } catch (err) { /* تجاهل */ }
+    if (!saved) apply(e.matches ? "dark" : "light");
+  });
+})();
