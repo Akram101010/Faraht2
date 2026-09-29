@@ -69,6 +69,9 @@
    كل صنف يختار منهم العميل. كل خيار بياخد priceAdd (بالجنيه) بيتضاف
    على سعر الكيلو الأساسي قبل ما يتحسب سعر الوزن المختار. عدّل رقم الـ
    priceAdd هنا لو فرق سعر المحوج عن الساده مختلف عن 15 جنيه/كيلو.
+   grindPriceOverride على صنف معيّن (رقم) بيغيّر سعر المحوج لنفس الصنف
+   بس، بدل السعر العام في grindOptions (مستخدم في "بن برازيلي" اللي
+   تحويجته 40 بدل 60 زي باقي الأنواع).
    -------------------------------------------------------------------------
    excludeFromBox (تبويب شكولاتة بالوزن بس):
    -------------------------------------------------------------------------
@@ -103,7 +106,8 @@ const EGYPT_GOVERNORATES = [
 const STORE = {
   name: "فرحات",
   tagline: "عالم من الجودة",
-  whatsapp: "201019914575", // رقم واتساب المحل (بالكود الدولي بدون +)
+  whatsapp: "201019914575", // رقم واتساب المحل (بالكود الدولي بدون +) — بيستخدمه زرار الهيرو والفوتر وإرسال الطلبات
+  displayPhone: "0503613828", // رقم الاتصال الظاهر فوق جنب اللوجو وأقسام فرحات في الهيدر بس (مش واتساب)
   address: "المنزلة - شارع عمر أفندي - أمام مسجد شلباية",
   mapsUrl: "https://maps.app.goo.gl/nYio5xdCsxLR85qa6",
   facebook: "https://www.facebook.com/share/1DjkpeidTK/?mibextid=wwXIfr",
@@ -146,10 +150,10 @@ const STORE = {
           // الكيلو الأساسي (priceAdd)، وبيتوضّح في السلة ورسالة الواتساب.
           grindOptions: [
             { key: "plain", label: "سادة", priceAdd: 0 },
-            { key: "spiced", label: "محوج", priceAdd: 50 },
+            { key: "spiced", label: "محوج", priceAdd: 60 },
           ],
           items: [
-            { name: "بن برازيلي", price: 760, img: "images/coffee/e16_brazilian.jpg" , bestseller: true },
+            { name: "بن برازيلي", price: 760, img: "images/coffee/e16_brazilian.jpg" , bestseller: true, grindPriceOverride: 40 },
             { name: "بن كولمبي", price: 1040, img: "images/coffee/e08_colombian.jpg" , bestseller: true },
             { name: "توليفه اسبشيال", price: 880, img: "images/coffee/e11_special.jpg" },
             { name: "توليفه سوبر", price: 880, img: "images/coffee/e13_super.jpg" , bestseller: true },

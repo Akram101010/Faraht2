@@ -597,6 +597,9 @@ function toProductDoc(item, sectionId, tabId) {
     customBox: !!item.customBox,
     price: typeof item.price === "number" ? item.price : null,
   };
+  if (item.noGrind) out.noGrind = true;
+  if (typeof item.grindPriceOverride === "number") out.grindPriceOverride = item.grindPriceOverride;
+  if (item.soldOut) out.soldOut = true;
   if (item.customBox) {
     out.minWeight = item.minWeight;
     out.maxWeight = item.maxWeight;

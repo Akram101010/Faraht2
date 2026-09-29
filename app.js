@@ -241,8 +241,15 @@ function hasActiveDeal(item) {
 function dealFactor(item) {
   return hasActiveDeal(item) ? 1 - item.deal.percent / 100 : 1;
 }
+// فرق سعر التحويج: بياخد سعر الصنف نفسه (grindPriceOverride) لو موجود،
+// وإلا بيرجع للسعر العام بتاع نوع التحويج ده (grind.priceAdd)
+function grindAddFor(item, grind) {
+  if (!grind) return 0;
+  if (grind.priceAdd > 0 && typeof item.grindPriceOverride === "number") return item.grindPriceOverride;
+  return grind.priceAdd || 0;
+}
 function basePriceOf(item, grind) {
-  return item.price + (grind ? grind.priceAdd || 0 : 0);
+  return item.price + grindAddFor(item, grind);
 }
 function effectivePrice(item, grind) {
   return basePriceOf(item, grind) * dealFactor(item);
@@ -860,7 +867,7 @@ function currentGrind(section, item) {
 function buildGrindToggle(container, section, item) {
   const key = `${section.id}|${item.name}`;
   container.innerHTML = section.grindOptions
-    .map((g) => `<button type="button" class="grind-btn" data-grind="${g.key}">${g.label}${g.priceAdd ? ` <span class="grind-extra">+${money(g.priceAdd)}</span>` : ""}</button>`)
+    .map((g) => `<button type="button" class="grind-btn" data-grind="${g.key}">${g.label}${g.priceAdd ? ` <span class="grind-extra">+${money(grindAddFor(item, g))}</span>` : ""}</button>`)
     .join("");
 
   const refreshActive = () => {
@@ -1404,6 +1411,9 @@ function logOrderToFirestore() {
     .catch((e) => console.warn("Farahat: تعذّر تسجيل الطلب في لوحة التحكم.", e));
 }
 
+// بتسجّل الطلب في لوحة التحكم (لو الاتصال بـ Firebase شغال). لو فشلت لأي
+// سبب (نت واقع، إعدادات لسه ماتظبطتش)، الطلب برضو بيوصل عادي على واتساب —
+// دي مجرد نسخة إضافية للإحصائيات، مش شرط لإتمام الطلب.
 /* ---------------------- التحقق المنطقي من بيانات العميل --------------------- */
 // الاسم لازم يبقى اسم حقيقي (كلمتين حروف بس)، والموبايل لازم رقم مصري صحيح
 // (11 رقم بيبدأ بـ 010/011/012/015). الأرقام العربي (٠١٢) بتتحوّل لإنجليزي
@@ -1574,6 +1584,8 @@ document.getElementById("heroLocationLink").href = STORE.mapsUrl;
 document.getElementById("footerMapsLink").href = STORE.mapsUrl;
 document.querySelectorAll(".js-phone-display").forEach((el) => (el.textContent = "0" + STORE.whatsapp.slice(2)));
 document.querySelectorAll(".js-phone-link").forEach((el) => (el.href = `tel:0${STORE.whatsapp.slice(2)}`));
+document.getElementById("headerPhoneDisplay").textContent = STORE.displayPhone;
+document.getElementById("headerCallBtn").href = `tel:${STORE.displayPhone}`;
 document.querySelectorAll(".js-address").forEach((el) => (el.textContent = STORE.address));
 
 loadSavedCart();
