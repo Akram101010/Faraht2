@@ -13,7 +13,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, getDocs, getDoc, addDoc, doc, setDoc, updateDoc,
-  deleteDoc, serverTimestamp, runTransaction, query, orderBy,
+  deleteDoc, serverTimestamp, runTransaction, query, orderBy, onSnapshot,
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut,
@@ -77,6 +77,20 @@ async function fetchOrders() {
   const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
   const snap = await getDocs(q);
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
+// بث حي للطلبات: بيبعت أحدث قايمة كل مرة تتغيّر فيها القاعدة، وكمان قايمة
+// الطلبات "الجديدة" بس (اللي اتضافت في نفس اللحظة دي)، عشان الداشبورد يقدر
+// ينبّه عليها (صوت/توست) من غير ما يحتاج المستخدم يعمل ريفريش.
+function listenOrders(onChange) {
+  const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+  return onSnapshot(q, (snap) => {
+    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const added = snap.docChanges()
+      .filter((c) => c.type === "added")
+      .map((c) => ({ id: c.doc.id, ...c.doc.data() }));
+    onChange(list, added);
+  });
 }
 
 /* -------------------------------- عداد الزوار ------------------------------ */
@@ -154,6 +168,7 @@ window.Farahat = {
   addOrder,
   updateOrder,
   fetchOrders,
+  listenOrders,
   incrementVisit,
   fetchVisitCount,
   fetchDeals,

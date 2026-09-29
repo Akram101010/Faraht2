@@ -403,11 +403,28 @@ button {
 .sections-menu-close:hover { background: var(--close-hover); }
 
 .sections-menu-list {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 4px;
+  scrollbar-width: thin;
+}
+
+/* ظل خفيف تحت لما فيه محتوى متقطوع تحت (زي سبرتايات لما القايمة تطول
+   بعد ما تفتح أكتر من قسم) — بيبان بس لو فيه سكرول فعلي ممكن يحصل */
+.sections-menu-panel::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 26px;
+  background: linear-gradient(to top, var(--cream), transparent);
+  pointer-events: none;
 }
 
 .smi-item {
@@ -648,6 +665,77 @@ button {
   font-size: 0.95rem;
 }
 
+/* شارة "معاكم من سنة كذا" — إحساس بالعراقة والاستمرارية، زي ختم على صورة المحل */
+.hero-est-badge {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 26%, #fbe8b8, var(--gold-deep) 78%);
+  border: 4px solid rgba(255, 255, 255, 0.95);
+  box-shadow: 0 6px 0 rgba(0, 0, 0, 0.2), 0 18px 36px -8px rgba(0, 0, 0, 0.65), inset 0 0 0 3px rgba(58, 37, 8, 0.2);
+  color: #3a2508;
+  text-align: center;
+  overflow: hidden;
+}
+.hero-est-badge::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  border: 1px dashed rgba(58, 37, 8, 0.4);
+  pointer-events: none;
+}
+.hero-est-badge::after {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  background: linear-gradient(115deg, transparent 40%, rgba(255, 255, 255, 0.8) 50%, transparent 60%);
+  animation: badgeSheen 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes badgeSheen {
+  0%, 40% { transform: translateX(-60%) rotate(0deg); opacity: 0; }
+  55% { opacity: 1; }
+  75%, 100% { transform: translateX(60%) rotate(0deg); opacity: 0; }
+}
+.hero-est-badge .est-tag {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 1.8px;
+  opacity: 0.88;
+  margin-bottom: 2px;
+}
+.hero-est-badge .est-year {
+  font-family: var(--font-numeric);
+  font-size: 2rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45);
+}
+.hero-est-badge .est-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+@media (max-width: 720px) {
+  .hero-est-badge { width: 66px; height: 66px; top: 10px; left: 10px; border-width: 2px; }
+  .hero-est-badge .est-tag { font-size: 0.42rem; letter-spacing: 0.8px; }
+  .hero-est-badge .est-year { font-size: 1.1rem; }
+  .hero-est-badge .est-label { font-size: 0.46rem; margin-top: 1px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-est-badge::after { animation: none; }
+}
+
 .hero-content .eyebrow {
   display: inline-flex;
   align-items: center;
@@ -751,14 +839,42 @@ button {
   margin-top: 26px;
 }
 
-.category-rail .container {
+.category-rail-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.chips-track {
   display: flex;
   gap: 10px;
   overflow-x: auto;
   padding-block: 4px 2px;
   scrollbar-width: none;
+  flex: 1 1 auto;
+  min-width: 0;
+  mask-image: linear-gradient(to left, transparent, #000 14px, #000 calc(100% - 4px), transparent);
 }
-.category-rail .container::-webkit-scrollbar { display: none; }
+.chips-track::-webkit-scrollbar { display: none; }
+
+.category-more-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  margin-inline-start: -8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  box-shadow: 0 4px 12px -3px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  z-index: 1;
+}
+.category-more-btn svg { width: 14px; height: 14px; }
+.category-more-btn:hover { transform: scale(1.08); }
+.category-more-btn.at-end { opacity: 0; pointer-events: none; }
 
 .chip {
   flex-shrink: 0;
@@ -779,14 +895,47 @@ button {
 
 /* ------------------------------- قسم المزاج ------------------------------- */
 
+.mood-tabs-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
 .mood-tabs {
   display: flex;
   gap: 8px;
-  margin-bottom: 22px;
-  flex-wrap: wrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+  mask-image: linear-gradient(to left, transparent, #000 14px, #000 calc(100% - 4px), transparent);
 }
+.mood-tabs::-webkit-scrollbar { display: none; }
+
+.mood-tabs-more-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-inline-start: -6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  transition: opacity 0.2s ease, transform 0.15s ease;
+  z-index: 1;
+}
+.mood-tabs-more-btn svg { width: 13px; height: 13px; }
+.mood-tabs-more-btn:hover { transform: scale(1.08); }
+.mood-tabs-more-btn.at-end { opacity: 0; pointer-events: none; }
 
 .mood-tab {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1303,6 +1452,31 @@ button {
   pointer-events: auto;
 }
 
+.reorder-fab {
+  position: fixed;
+  bottom: 82px;
+  left: 20px;
+  z-index: 59;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: linear-gradient(135deg, var(--sun), var(--gold-deep));
+  color: #3a2508;
+  padding: 9px 14px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  box-shadow: 0 10px 20px -8px rgba(173, 122, 46, 0.55);
+  transition: transform 0.2s cubic-bezier(.34,1.56,.64,1), opacity 0.2s, box-shadow 0.15s ease;
+}
+.reorder-fab svg { width: 15px; height: 15px; flex-shrink: 0; }
+.reorder-fab:hover { transform: translateY(-2px); box-shadow: 0 14px 24px -8px rgba(173, 122, 46, 0.65); }
+.reorder-fab[hidden] { display: none; }
+@media (max-width: 720px) {
+  .reorder-fab { left: 14px; bottom: 70px; padding: 8px 12px; font-size: 0.72rem; }
+  .reorder-fab svg { width: 13px; height: 13px; }
+}
+
 .cart-fab svg { width: 22px; height: 22px; }
 
 .cart-fab .badge {
@@ -1560,6 +1734,57 @@ button {
   padding: 40px 20px;
 }
 .cart-empty .icon { font-size: 2.6rem; display: block; margin-bottom: 10px; }
+
+/* اقتراح "عادة بيتطلب معاه" */
+.cart-suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 16px 10px;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--cream-2);
+  border: 1px dashed var(--olive);
+}
+.cs-thumb {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--media-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+.cs-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.cs-body { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cs-label { font-size: 0.68rem; font-weight: 700; color: var(--gold-ink); }
+.cs-name { font-size: 0.84rem; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cs-add {
+  flex-shrink: 0;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: var(--forest);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  transition: transform 0.15s ease;
+}
+.cs-add:hover { transform: translateY(-1px); }
+.cs-dismiss {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+}
+.cs-dismiss:hover { background: var(--line); color: var(--ink); }
 
 .cart-line {
   position: relative;

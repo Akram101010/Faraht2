@@ -33,6 +33,16 @@
   })();
 </script>
 <link rel="icon" href="images/logo_icon.png" type="image/png">
+<link rel="icon" href="images/pwa/favicon-32.png" sizes="32x32" type="image/png">
+
+<!-- إعدادات PWA — تسمح للعميل "يثبّت" الموقع على شاشة موبايله زي تطبيق -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="images/pwa/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="فرحات">
+<meta name="mobile-web-app-capable" content="yes">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800;900&family=Cairo:wght@600;700;800;900&display=swap" rel="stylesheet">
@@ -117,7 +127,12 @@
       </div>
     </div>
     <div class="hero-media">
-      <img src="images/hero_shopfront.jpg" alt="واجهة محل فرحات">
+      <img src="images/hero_shopfront.jpg" alt="واجهة محل فرحات" fetchpriority="high">
+      <div class="hero-est-badge">
+        <span class="est-tag">EST.</span>
+        <span class="est-year">2011</span>
+        <span class="est-label">معاكم من زمان</span>
+      </div>
       <a class="hero-location" id="heroLocationLink" href="#" target="_blank" rel="noopener">
         <span class="pin">📍</span>
         <span class="js-address">المنزلة - شارع عمر أفندي - أمام مسجد شلباية</span>
@@ -135,7 +150,12 @@
   </div>
 
   <div class="category-rail">
-    <div class="container" id="categoryChips"></div>
+    <div class="container category-rail-inner">
+      <div class="chips-track" id="categoryChips"></div>
+      <button type="button" class="category-more-btn at-end" id="categoryMoreBtn" aria-label="فيه أقسام تانية، دوس عشان تشوفها">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>
+      </button>
+    </div>
   </div>
 
   <section class="deals-section" id="deals">
@@ -172,7 +192,7 @@
   <div class="container">
     <div class="footer-top">
       <div class="footer-brand">
-        <img src="images/logo_white_stacked.png" alt="فرحات" style="height:70px;width:auto;">
+        <img src="images/logo_white_stacked.png" alt="فرحات" loading="lazy" style="height:70px;width:auto;">
         <p>فرحات — عالم من الجودة. مكسرات وبن وعسل وتسالي وتمور، مختارة بعناية من غير ما تدور غير في موقع واحد.</p>
         <div class="social-links">
           <a id="facebookLink" href="#" target="_blank" rel="noopener" aria-label="فرحات على فيسبوك">
@@ -224,6 +244,12 @@
   </div>
 </footer>
 
+<!-- زرار "اطلب زي آخر مرة" — بيظهر بس لو فيه طلب سابق اتبعت -->
+<button class="reorder-fab" id="reorderFab" type="button" aria-label="اطلب زي آخر طلب ليك" hidden>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 2.64 6.36"/><path d="M3 21v-5h5"/></svg>
+  <span>اطلب زي آخر مرة</span>
+</button>
+
 <!-- زر السلة العائم -->
 <button class="cart-fab" id="cartFab" type="button" aria-label="فتح السلة">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h2l2.4 12.4a2 2 0 0 0 2 1.6h8.6a2 2 0 0 0 2-1.6L22 8H6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="21" r="1.4" fill="currentColor" stroke="none"/><circle cx="18" cy="21" r="1.4" fill="currentColor" stroke="none"/></svg>
@@ -245,6 +271,7 @@
     </div>
 
     <div class="cart-items" id="cartItems"></div>
+    <div class="cart-suggestion" id="cartSuggestion" hidden></div>
 
     <div class="cart-form">
       <label for="custName">الاسم <span class="req">*</span></label>

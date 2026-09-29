@@ -143,6 +143,7 @@ button, input, select, textarea { font-family: inherit; }
   margin: 0 auto;
 }
 .dash-tab {
+  position: relative;
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -153,6 +154,30 @@ button, input, select, textarea { font-family: inherit; }
   cursor: pointer;
 }
 .dash-tab.active { background: var(--forest); color: #fff; border-color: var(--forest); }
+
+.tab-new-badge {
+  position: absolute;
+  top: -7px;
+  left: -7px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #e6482c;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px -2px rgba(190, 35, 20, 0.6);
+  animation: tabBadgePop 0.35s ease;
+}
+@keyframes tabBadgePop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); }
+}
 
 .dash-main { max-width: 1100px; margin: 0 auto; padding: 20px; }
 
@@ -530,3 +555,6 @@ button, input, select, textarea { font-family: inherit; }
 .chip-more summary { cursor: pointer; font-size: 0.82rem; font-weight: 800; color: var(--forest); padding: 4px 0 10px; }
 .chip-more[open] { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip-more[open] summary { width: 100%; }
+
+.field-hint { display: block; margin-top: 4px; font-size: 0.72rem; font-weight: 500; color: var(--ink-soft); }
+#pfPairWith { height: auto; }

@@ -62,6 +62,7 @@ const els = {
   pfImgUploadBtn: document.getElementById("pfImgUploadBtn"),
   pfImgUploadStatus: document.getElementById("pfImgUploadStatus"),
   pfCustomBox: document.getElementById("pfCustomBox"),
+  pfPairWith: document.getElementById("pfPairWith"),
   pfCustomBoxFields: document.getElementById("pfCustomBoxFields"),
   pfMinWeight: document.getElementById("pfMinWeight"),
   pfMaxWeight: document.getElementById("pfMaxWeight"),
@@ -104,6 +105,8 @@ let deals = [];
 let editingProductId = null;
 let editingDealId = null;
 let orderFilter = "all";
+let ordersInitialized = false;
+let unsubscribeOrders = null;
 let dealSource = null; // { sectionId, tabId, name } لو العرض مربوط بمنتج موجود
 let toastTimer = null;
 let booted = false;
@@ -151,8 +154,56 @@ function allTabs() {
 
 /* -------------------------------- تسجيل الدخول ------------------------------ */
 
+// بنجهّز الصوت هنا (لحظة ضغطة حقيقية من المستخدم على زرار الدخول)، عشان
+// المتصفح يسمح بتشغيل صوت لاحقًا من غير تفاعل مباشر (سياسة المتصفحات بتمنع
+// تشغيل صوت تلقائي من غير ما يكون حصل تفاعل من المستخدم قبل كده في نفس الصفحة).
+let notifyCtx = null;
+function ensureNotifyContext() {
+  if (notifyCtx) return;
+  try {
+    notifyCtx = new (window.AudioContext || window.webkitAudioContext)();
+    updateSoundStatus(true);
+  } catch (e) { /* تجاهل */ }
+}
+function updateSoundStatus(active) {
+  if (!els.soundStatus) return;
+  els.soundStatus.textContent = active ? "🔔 التنبيه الصوتي شغال" : "⏳ الصوت هيتفعّل أول ما تدوس حاجة";
+  els.soundStatus.classList.toggle("active", !!active);
+}
+// أي تفاعل من المستخدم (مش بس تسجيل الدخول) بيكفي نجهّز بيه الصوت — مهم لو
+// جلسة الدخول كانت محفوظة أصلاً وفتح لوحة التحكم من غير ما يسجّل دخول تاني.
+["click", "keydown", "touchstart"].forEach((evt) => {
+  document.addEventListener(evt, ensureNotifyContext, { once: true });
+});
+els.testSoundBtn?.addEventListener("click", () => {
+  ensureNotifyContext();
+  playNotifySound();
+  showToast("🔊 لو سمعت نغمتين، التنبيه شغال تمام");
+});
+function playNotifySound() {
+  if (!notifyCtx) return;
+  try {
+    if (notifyCtx.state === "suspended") notifyCtx.resume();
+    const beep = (freq, start, dur) => {
+      const o = notifyCtx.createOscillator();
+      const g = notifyCtx.createGain();
+      o.connect(g); g.connect(notifyCtx.destination);
+      o.type = "sine";
+      o.frequency.setValueAtTime(freq, notifyCtx.currentTime + start);
+      g.gain.setValueAtTime(0.0001, notifyCtx.currentTime + start);
+      g.gain.exponentialRampToValueAtTime(0.32, notifyCtx.currentTime + start + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, notifyCtx.currentTime + start + dur);
+      o.start(notifyCtx.currentTime + start);
+      o.stop(notifyCtx.currentTime + start + dur + 0.02);
+    };
+    beep(880, 0, 0.22);
+    beep(1175, 0.16, 0.32);
+  } catch (e) { /* تجاهل */ }
+}
+
 els.loginForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  ensureNotifyContext();
   els.loginError.textContent = "";
   els.loginBtn.disabled = true;
   els.loginBtn.textContent = "بيدخل...";
@@ -177,6 +228,8 @@ F.watchAuth((user) => {
     els.dashScreen.hidden = true;
     els.loginScreen.hidden = false;
     booted = false;
+    ordersInitialized = false;
+    if (unsubscribeOrders) { unsubscribeOrders(); unsubscribeOrders = null; }
   }
 });
 
@@ -186,6 +239,7 @@ els.dashTabs.forEach((btn) => {
   btn.addEventListener("click", () => {
     els.dashTabs.forEach((b) => b.classList.toggle("active", b === btn));
     els.dashPanels.forEach((p) => p.classList.toggle("active", p.id === `panel-${btn.dataset.panel}`));
+    if (btn.dataset.panel === "orders") clearNewOrdersBadge();
   });
 });
 
@@ -220,12 +274,48 @@ function updateSeedBtnLabel() {
 }
 
 async function loadOrders() {
-  try {
-    orders = await F.fetchOrders();
-  } catch (e) {
-    console.error(e);
-    orders = [];
+  // بث حي: أول استدعاء بيرجّع أول ما القايمة توصل (زي أي fetch عادي)، وبعد
+  // كده بيفضل شغال في الخلفية ويحدّث orders + ينبّه لوحده لحد ما تقفل الداشبورد.
+  if (!F.listenOrders) {
+    try { orders = await F.fetchOrders(); } catch (e) { console.error(e); orders = []; }
+    return;
   }
+  return new Promise((resolve) => {
+    if (unsubscribeOrders) unsubscribeOrders();
+    unsubscribeOrders = F.listenOrders((list, added) => {
+      orders = list;
+      if (ordersInitialized && added.length > 0) {
+        added.forEach((o) => {
+          showToast(`🔔 طلب جديد من ${o.customerName || "عميل"} — ${money(o.total)} ج.م`);
+        });
+        playNotifySound();
+        flagNewOrdersOnTab(added.length);
+        renderOverview();
+        renderOrdersTable();
+      }
+      if (!ordersInitialized) { ordersInitialized = true; resolve(); }
+    });
+  });
+}
+
+function flagNewOrdersOnTab(count) {
+  const tabBtn = document.querySelector('.dash-tab[data-panel="orders"]');
+  if (!tabBtn) return;
+  const current = Number(tabBtn.dataset.newCount || 0) + count;
+  tabBtn.dataset.newCount = current;
+  let badge = tabBtn.querySelector(".tab-new-badge");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.className = "tab-new-badge";
+    tabBtn.appendChild(badge);
+  }
+  badge.textContent = current;
+}
+function clearNewOrdersBadge() {
+  const tabBtn = document.querySelector('.dash-tab[data-panel="orders"]');
+  if (!tabBtn) return;
+  tabBtn.dataset.newCount = 0;
+  tabBtn.querySelector(".tab-new-badge")?.remove();
 }
 
 async function loadDeals() {
@@ -427,12 +517,25 @@ function renderProductsTable(filter = "") {
 els.productSearch.addEventListener("input", () => renderProductsTable(els.productSearch.value));
 els.addProductBtn.addEventListener("click", () => openProductModal(null));
 
+function populatePairWithSelect(excludeId) {
+  const opts = products
+    .filter((p) => p.id !== excludeId && !p.customBox)
+    .map((p) => {
+      const subId = p.tabId || p.sectionId;
+      const label = p.tabId ? `${sectionTitle(p.sectionId)} › ${tabTitle(p.sectionId, p.tabId)} — ${p.name}` : `${sectionTitle(p.sectionId)} — ${p.name}`;
+      const value = JSON.stringify({ subId, name: p.name });
+      return `<option value='${value.replace(/'/g, "&#39;")}'>${label}</option>`;
+    });
+  els.pfPairWith.innerHTML = opts.join("");
+}
+
 function openProductModal(product) {
   editingProductId = product ? product.id : null;
   els.productModalTitle.textContent = product ? "تعديل منتج" : "إضافة منتج";
   els.productFormError.textContent = "";
   els.productForm.reset();
   updateTabSelectForSection();
+  populatePairWithSelect(editingProductId);
 
   if (product) {
     els.pfName.value = product.name || "";
@@ -449,6 +552,13 @@ function openProductModal(product) {
     els.pfWeightUnitLabel.value = product.weightUnitLabel || "";
     if (product.linkToTab) els.pfLinkToTab.value = product.linkToTab;
     els.pfNote.value = product.note || "";
+    if (Array.isArray(product.pairWith)) {
+      const wanted = new Set(product.pairWith.map((r) => `${r.subId}|${r.name}`));
+      [...els.pfPairWith.options].forEach((opt) => {
+        const v = JSON.parse(opt.value);
+        opt.selected = wanted.has(`${v.subId}|${v.name}`);
+      });
+    }
     els.productDeleteBtn.hidden = false;
   } else {
     els.productDeleteBtn.hidden = true;
@@ -484,6 +594,7 @@ els.productForm.addEventListener("submit", async (e) => {
     bestseller: els.pfBestseller.checked,
     excludeFromBox: els.pfExcludeFromBox.checked,
     customBox: els.pfCustomBox.checked,
+    pairWith: [...els.pfPairWith.selectedOptions].map((opt) => JSON.parse(opt.value)),
   };
 
   if (els.pfCustomBox.checked) {
@@ -600,6 +711,7 @@ function toProductDoc(item, sectionId, tabId) {
   if (item.noGrind) out.noGrind = true;
   if (typeof item.grindPriceOverride === "number") out.grindPriceOverride = item.grindPriceOverride;
   if (item.soldOut) out.soldOut = true;
+  if (Array.isArray(item.pairWith) && item.pairWith.length > 0) out.pairWith = item.pairWith;
   if (item.customBox) {
     out.minWeight = item.minWeight;
     out.maxWeight = item.maxWeight;

@@ -43,6 +43,8 @@
       <span>لوحة تحكم فرحات</span>
     </div>
     <div class="dash-header-actions">
+      <span class="sound-status" id="soundStatus" title="بيتفعّل أول ما تدوس في أي مكان في اللوحة">⏳ الصوت هيتفعّل أول ما تدوس حاجة</span>
+      <button type="button" class="dash-link" id="testSoundBtn">🔊 جرّب الصوت</button>
       <a href="../index.html" target="_blank" class="dash-link">👁️ شوف الموقع</a>
       <button type="button" class="dash-link" id="logoutBtn">🚪 تسجيل خروج</button>
     </div>
@@ -252,6 +254,12 @@
         <button type="button" class="btn-outline" id="pfImgUploadBtn">⬆️ رفع صورة من الجهاز</button>
         <span class="upload-status" id="pfImgUploadStatus"></span>
       </div>
+
+      <label>
+        أصناف بتتطلب عادةً مع الصنف ده (اختياري)
+        <select id="pfPairWith" multiple size="5"></select>
+        <small class="field-hint">دوس واضغط Ctrl (أو Cmd على ماك) لاختيار أكتر من صنف. العميل هيشوف اقتراح بيهم لما يضيف الصنف ده لسلته.</small>
+      </label>
 
       <label class="checkbox-label">
         <input type="checkbox" id="pfCustomBox">

@@ -24,11 +24,14 @@ const els = {
   nav: document.getElementById("mainNav"),
   navMoreBtn: document.getElementById("navMoreBtn"),
   chips: document.getElementById("categoryChips"),
+  categoryMoreBtn: document.getElementById("categoryMoreBtn"),
   cartFab: document.getElementById("cartFab"),
+  reorderFab: document.getElementById("reorderFab"),
   fabCount: document.getElementById("fabCount"),
   fabTotal: document.getElementById("fabTotal"),
   overlay: document.getElementById("cartOverlay"),
   cartItems: document.getElementById("cartItems"),
+  cartSuggestion: document.getElementById("cartSuggestion"),
   cartTotal: document.getElementById("cartTotal"),
   confirmBtn: document.getElementById("confirmBtn"),
   toast: document.getElementById("toast"),
@@ -163,8 +166,17 @@ function sortForDisplay(items) {
 function buildTabbedSection(section) {
   const wrap = document.createDocumentFragment();
 
+  const tabsWrap = document.createElement("div");
+  tabsWrap.className = "mood-tabs-wrap reveal";
   const tabsBar = document.createElement("div");
-  tabsBar.className = "mood-tabs reveal";
+  tabsBar.className = "mood-tabs";
+  tabsWrap.appendChild(tabsBar);
+  const tabsMoreBtn = document.createElement("button");
+  tabsMoreBtn.type = "button";
+  tabsMoreBtn.className = "mood-tabs-more-btn at-end";
+  tabsMoreBtn.setAttribute("aria-label", "فيه أنواع تانية، دوس عشان تشوفها");
+  tabsMoreBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+  tabsWrap.appendChild(tabsMoreBtn);
   section.tabs.forEach((tab, i) => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -179,7 +191,7 @@ function buildTabbedSection(section) {
     });
     tabsBar.appendChild(btn);
   });
-  wrap.appendChild(tabsBar);
+  wrap.appendChild(tabsWrap);
 
   const panels = document.createElement("div");
   panels.className = "mood-panels";
@@ -533,30 +545,44 @@ els.boxConfirmBtn.addEventListener("click", confirmBoxBuilder);
 // شريط الأقسام في الهيدر بيعمل اسكرول أفقي، وده مش واضح دايمًا للعميل إنه
 // موجود. الزرار ده بيفضل ظاهر لحد ما آخر قسم في الشريط يبقى ظاهر بالكامل.
 
-function setupNavScrollHint() {
-  const nav = els.nav;
-  const btn = els.navMoreBtn;
-  if (!nav || !btn) return;
+// شريط قابل للسحب أفقيًا (شريط الأقسام فوق، أو شرايط التبويبات جوه أي قسم)
+// مع زرار صغير بيبان بس لما فيه محتوى متقطوع، وبيختفي أول ما توصل للآخر.
+function setupScrollHint(scrollEl, btn) {
+  if (!scrollEl || !btn) return;
 
   function refresh() {
-    const links = nav.querySelectorAll("a");
-    if (links.length === 0) { btn.classList.add("at-end"); return; }
-    const last = links[links.length - 1];
-    const navRect = nav.getBoundingClientRect();
+    const items = scrollEl.children;
+    if (items.length === 0) { btn.classList.add("at-end"); return; }
+    const last = items[items.length - 1];
+    const wrapRect = scrollEl.getBoundingClientRect();
     const lastRect = last.getBoundingClientRect();
-    const fullyVisible = lastRect.left >= navRect.left - 2 && lastRect.right <= navRect.right + 2;
+    const fullyVisible = lastRect.left >= wrapRect.left - 2 && lastRect.right <= wrapRect.right + 2;
     btn.classList.toggle("at-end", fullyVisible);
   }
 
-  nav.addEventListener("scroll", refresh);
+  scrollEl.addEventListener("scroll", refresh);
   window.addEventListener("resize", refresh);
   btn.addEventListener("click", () => {
-    const links = nav.querySelectorAll("a");
-    const last = links[links.length - 1];
+    const items = scrollEl.children;
+    const last = items[items.length - 1];
     if (last) last.scrollIntoView({ behavior: "smooth", inline: "end", block: "nearest" });
   });
 
   refresh();
+}
+
+function setupNavScrollHint() {
+  setupScrollHint(els.nav, els.navMoreBtn);
+}
+
+function setupCategoryRailScrollHint() {
+  setupScrollHint(els.chips, els.categoryMoreBtn);
+}
+
+function setupMoodTabsScrollHints() {
+  document.querySelectorAll(".mood-tabs-wrap").forEach((wrap) => {
+    setupScrollHint(wrap.querySelector(".mood-tabs"), wrap.querySelector(".mood-tabs-more-btn"));
+  });
 }
 
 /* ------------------------------ منيو "أقسام فرحات" -------------------------- */
@@ -1049,6 +1075,66 @@ function findSubById(subId) {
   return null;
 }
 
+/* ------------------------------- عادة بيتطلب معاه ---------------------------- */
+// أي صنف ممكن يكون عليه item.pairWith = [{subId, name}, ...] (بيتحط من
+// الداشبورد). لو صنف زيه موجود في السلة وواحد من الأصناف المرتبطة بيه لسه
+// مش في السلة، بنقترحه في شريط صغير جوه السلة، من غير ما نضيفه غصب عن العميل.
+
+const dismissedSuggestions = new Set();
+
+function computeCartSuggestion() {
+  const inCartKeys = new Set(
+    Object.values(cart).filter((l) => l.subId && l.itemName).map((l) => `${l.subId}::${l.itemName}`)
+  );
+  for (const line of Object.values(cart)) {
+    if (!line.subId || !line.itemName) continue;
+    const sourceSub = findSubById(line.subId);
+    const sourceItem = sourceSub && (sourceSub.items || []).find((i) => i.name === line.itemName);
+    if (!sourceItem || !Array.isArray(sourceItem.pairWith)) continue;
+    for (const ref of sourceItem.pairWith) {
+      const refKey = `${ref.subId}::${ref.name}`;
+      if (inCartKeys.has(refKey) || dismissedSuggestions.has(refKey)) continue;
+      const targetSub = findSubById(ref.subId);
+      const targetItem = targetSub && (targetSub.items || []).find((i) => i.name === ref.name && !i.soldOut && !i.customBox);
+      if (targetItem) return { sub: targetSub, item: targetItem, key: refKey, becauseName: sourceItem.name };
+    }
+  }
+  return null;
+}
+
+function addSuggestedItemToCart(sub, item) {
+  if (sub.hasWeights) {
+    const w = weightOptionsFor(sub)[0];
+    changeWeightQty(sub, item, w, 1, currentGrind(sub, item));
+  } else {
+    changeQty(sub, item, cartKey(sub.id, item.name), 1);
+  }
+}
+
+function renderCartSuggestion() {
+  const slot = els.cartSuggestion;
+  if (!slot) return;
+  const suggestion = computeCartSuggestion();
+  if (!suggestion) { slot.hidden = true; slot.innerHTML = ""; return; }
+
+  const { sub, item, key, becauseName } = suggestion;
+  slot.hidden = false;
+  slot.innerHTML = `
+    <div class="cs-thumb">${item.img ? `<img src="${item.img}" alt="${item.name}">` : `<span>${sub.icon || "🛍️"}</span>`}</div>
+    <div class="cs-body">
+      <span class="cs-label">🧡 عادة بيتطلب مع ${becauseName}</span>
+      <strong class="cs-name">${item.name}</strong>
+    </div>
+    <button type="button" class="cs-add">+ ضيف</button>
+    <button type="button" class="cs-dismiss" aria-label="مش عايز الاقتراح ده">✕</button>
+  `;
+  slot.querySelector(".cs-add").addEventListener("click", () => addSuggestedItemToCart(sub, item));
+  slot.querySelector(".cs-dismiss").addEventListener("click", () => {
+    dismissedSuggestions.add(key);
+    renderCartSuggestion();
+  });
+}
+
 // بتعيد تسعير كل سطر من الكتالوج الحالي: السعر الجديد، العرض الشغال، وبتشيل
 // أي صنف اتحذف أو نفد أو خلص عرضه المستقل
 function repriceSavedCart() {
@@ -1173,6 +1259,7 @@ function cartTotalValue() { return Object.values(cart).reduce((s, l) => s + l.qt
 
 function refreshCartUI() {
   saveCartToStorage();
+  renderCartSuggestion();
   const count = cartCount();
   const total = cartTotalValue();
 
@@ -1278,6 +1365,48 @@ function closeCart() {
 els.cartFab.addEventListener("click", openCart);
 els.overlay.addEventListener("click", (e) => { if (e.target === els.overlay) closeCart(); });
 document.getElementById("cartCloseBtn").addEventListener("click", closeCart);
+
+/* -------------------------------- اطلب زي آخر مرة --------------------------- */
+// بعد كل طلب بيتبعت فعليًا على واتساب، بنسجّل نسخة منه هنا (منفصلة عن حفظ
+// السلة العادي). العميل الراجع يقدر يرجّع نفس الطلب بضغطة واحدة، وبتتراجع
+// أسعاره من الكتالوج الحالي زي بالظبط استرجاع السلة العادي.
+
+const LAST_ORDER_KEY = "farahat_last_order_v1";
+
+function saveLastOrder() {
+  if (Object.keys(cart).length === 0) return;
+  try { localStorage.setItem(LAST_ORDER_KEY, JSON.stringify({ ts: Date.now(), lines: cart })); } catch (e) { /* تجاهل */ }
+  updateReorderButtonVisibility();
+}
+
+function loadLastOrderLines() {
+  try {
+    const raw = localStorage.getItem(LAST_ORDER_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    return data && data.lines && Object.keys(data.lines).length > 0 ? data.lines : null;
+  } catch (e) { return null; }
+}
+
+function updateReorderButtonVisibility() {
+  if (els.reorderFab) els.reorderFab.hidden = !loadLastOrderLines();
+}
+
+els.reorderFab?.addEventListener("click", () => {
+  const lines = loadLastOrderLines();
+  if (!lines) return;
+  if (Object.keys(cart).length > 0 && !confirm("هيستبدل ده محتوى سلتك الحالية بآخر طلب ليك، تحب تكمل؟")) return;
+
+  Object.keys(cart).forEach((k) => delete cart[k]);
+  Object.entries(lines).forEach(([k, l]) => { cart[k] = { ...l }; });
+  const { dropped } = repriceSavedCart();
+  refreshCartUI();
+  rebuildAllCardActions();
+  openCart();
+  if (dropped.length) showToast(`⚠️ ${dropped.length === 1 ? dropped[0] : `${dropped.length} أصناف`} من آخر طلب مبقاش متاح`);
+  else showToast("🔁 رجّعنالك نفس طلبك اللي فات، راجعه وأكّد");
+});
+
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   if (els.sectionsMenuOverlay.classList.contains("open")) closeSectionsMenu();
@@ -1379,6 +1508,7 @@ els.confirmBtn.addEventListener("click", () => {
   const url = `https://wa.me/${STORE.whatsapp}?text=${text}`;
   window.open(url, "_blank");
   logOrderToFirestore(); // من غير ما ننتظرها، عشان متأخرش فتح واتساب
+  saveLastOrder(); // نسخة عشان زرار "اطلب زي آخر مرة" — قبل ما نصفّر sentCartSig
   sentCartSig = cartSignature(); // الطلب اتبعت: لو عمل ريفريش تبقى السلة فاضية مش طلب مكرر
   saveCartToStorage();
 });
@@ -1595,8 +1725,11 @@ searchIndex = buildSearchIndex();
 setupScrollSpy();
 setupScrollReveal();
 setupNavScrollHint();
+setupCategoryRailScrollHint();
+setupMoodTabsScrollHints();
 setupToTopButton();
 refreshCartUI();
+updateReorderButtonVisibility();
 setupDeliveryRegion();
 restoreCustomerInfo();
 
@@ -1636,8 +1769,7 @@ function restoreCustomerInfo() {
 }
 
 /* ------------------------------- شاشة التحميل ------------------------------ */
-// بتظهر 3 ثواني كل مرة الصفحة بتفتح فيها (مش مرة واحدة بس)، عشان تدي شكل
-// جمالي هادئ في البداية بدل ما المحتوى يظهر فجأة.
+// أنيميشن بسيط لحظة فتح الصفحة بس، مش تأخير مقصود — السرعة أهم من أي شكل.
 
 (function initPageLoader() {
   const loader = document.getElementById("pageLoader");
@@ -1646,7 +1778,7 @@ function restoreCustomerInfo() {
     loader.classList.add("hide");
     document.body.classList.remove("loading");
     loader.addEventListener("transitionend", () => loader.remove(), { once: true });
-  }, 3000);
+  }, 350);
 })();
 
 /* --------------------- ربط المنتجات الحية من لوحة التحكم ------------------- */
@@ -1988,6 +2120,8 @@ window.addEventListener("farahat-products-ready", (e) => {
   setupScrollSpy();
   setupScrollReveal();
   setupNavScrollHint();
+  setupCategoryRailScrollHint();
+  setupMoodTabsScrollHints();
   rebuildAllCardActions();
   syncDeals();
 });
@@ -2039,3 +2173,13 @@ setTimeout(finalizeCartRestore, 8000);
     if (!saved) apply(e.matches ? "dark" : "light");
   });
 })();
+
+/* ------------------------------- تثبيت الموقع (PWA) ------------------------- */
+// تسجيل الـ Service Worker شرط أساسي عشان المتصفح يعرض للعميل خيار "إضافة
+// للشاشة الرئيسية". من غير تخزين مؤقت عدواني (شوف sw.js) فمفيش خطر إنه
+// يشوف نسخة قديمة من المنتجات.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(() => { /* تجاهل لو فشل، الموقع يفضل شغال عادي */ });
+  });
+}
