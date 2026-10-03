@@ -58,6 +58,7 @@ const els = {
   pfBestseller: document.getElementById("pfBestseller"),
   pfExcludeFromBox: document.getElementById("pfExcludeFromBox"),
   pfImg: document.getElementById("pfImg"),
+  pfDescription: document.getElementById("pfDescription"),
   pfImgFile: document.getElementById("pfImgFile"),
   pfImgUploadBtn: document.getElementById("pfImgUploadBtn"),
   pfImgUploadStatus: document.getElementById("pfImgUploadStatus"),
@@ -546,6 +547,7 @@ function openProductModal(product) {
     els.pfBestseller.checked = !!product.bestseller;
     els.pfExcludeFromBox.checked = !!product.excludeFromBox;
     els.pfImg.value = product.img || "";
+    els.pfDescription.value = product.description || "";
     els.pfCustomBox.checked = !!product.customBox;
     els.pfMinWeight.value = product.minWeight ?? "";
     els.pfMaxWeight.value = product.maxWeight ?? "";
@@ -591,6 +593,7 @@ els.productForm.addEventListener("submit", async (e) => {
     sectionId: els.pfSection.value,
     tabId: els.pfTabWrap.hidden ? null : (els.pfTab.value || null),
     img: els.pfImg.value.trim() || null,
+    description: els.pfDescription.value.trim() || null,
     bestseller: els.pfBestseller.checked,
     excludeFromBox: els.pfExcludeFromBox.checked,
     customBox: els.pfCustomBox.checked,
@@ -711,6 +714,7 @@ function toProductDoc(item, sectionId, tabId) {
   if (item.noGrind) out.noGrind = true;
   if (typeof item.grindPriceOverride === "number") out.grindPriceOverride = item.grindPriceOverride;
   if (item.soldOut) out.soldOut = true;
+  if (item.description) out.description = item.description;
   if (Array.isArray(item.pairWith) && item.pairWith.length > 0) out.pairWith = item.pairWith;
   if (item.customBox) {
     out.minWeight = item.minWeight;

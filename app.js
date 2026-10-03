@@ -145,6 +145,7 @@ function buildSections() {
     els.chips.appendChild(chip);
   });
   enhanceGridSliders();
+  document.dispatchEvent(new Event("farahat:catalog"));
 }
 
 /* --------------------------- قسم بتبويبات (المزاج) ------------------------- */
@@ -1273,6 +1274,7 @@ function refreshCartUI() {
   els.fabTotal.textContent = `${money(total)} ج.م`;
   els.cartTotal.textContent = `${money(total)} ج.م`;
   els.confirmBtn.disabled = count === 0;
+  document.dispatchEvent(new CustomEvent("farahat:cart", { detail: { count, total } }));
 
   els.cartItems.innerHTML = "";
   const lines = Object.entries(cart);
@@ -2054,6 +2056,7 @@ function renderDeals() {
   if (!track || !slider || !empty) return;
 
   const deals = liveDeals();
+  document.dispatchEvent(new CustomEvent("farahat:deals", { detail: { count: deals.length } }));
   track.innerHTML = "";
   if (deals.length === 0) {
     slider.hidden = true;

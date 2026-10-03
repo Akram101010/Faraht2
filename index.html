@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>فرحات | عالم من الجودة — مكسرات، بن، عسل وتسالي</title>
 <meta name="description" content="محل فرحات للمكسرات والبن والعسل والتسالي — اطلب أونلاين وهيوصلك تأكيد الطلب على واتساب">
 
@@ -39,7 +39,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="images/pwa/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="فرحات">
 <meta name="mobile-web-app-capable" content="yes">
 
@@ -80,6 +80,10 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>
       </button>
     </div>
+    <button type="button" class="fav-header-btn" id="favHeaderBtn" aria-label="المفضلة" title="المفضلة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+      <b class="fav-count" id="favCount" hidden>0</b>
+    </button>
     <button type="button" class="theme-toggle-btn" id="themeToggleBtn" aria-label="تبديل الوضع الداكن / الفاتح" title="الوضع الداكن / الفاتح">
       <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6"/></svg>
@@ -240,7 +244,14 @@
         </a>
       </div>
     </div>
-    <div class="footer-bottom">جميع الحقوق محفوظة © فرحات — <span id="brandName">فرحات</span></div>
+    <div class="footer-bottom">
+      <div class="fb-ornament" aria-hidden="true"><span></span><i></i><span></span></div>
+      <p class="fb-copy">جميع الحقوق محفوظة © <span id="copyYear">2026</span> <span id="brandName">فرحات</span></p>
+      <a class="dev-credit" href="https://www.facebook.com/share/1PiWyxKn8h/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Developed by ENG/AKRAM FARHAT — حسابه على فيسبوك">
+        <span class="dc-label">Developed by</span>
+        <span class="dc-name" dir="ltr">ENG/AKRAM FARHAT</span>
+      </a>
+    </div>
   </div>
 </footer>
 
@@ -345,5 +356,6 @@
 <script type="module" src="firebase-init.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
+<script src="ui-app.js"></script>
 </body>
 </html>
