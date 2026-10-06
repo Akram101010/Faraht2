@@ -44,6 +44,14 @@ const els = {
 
   ordersTbody: document.getElementById("ordersTbody"),
   exportOrdersBtn: document.getElementById("exportOrdersBtn"),
+  weekPrev: document.getElementById("weekPrev"),
+  weekNext: document.getElementById("weekNext"),
+  weekAll: document.getElementById("weekAll"),
+  weekTitle: document.getElementById("weekTitle"),
+  weekRange: document.getElementById("weekRange"),
+  weekSummary: document.getElementById("weekSummary"),
+  statOrdersAll: document.getElementById("statOrdersAll"),
+  statRevenueAll: document.getElementById("statRevenueAll"),
   ordersEmptyHint: document.getElementById("ordersEmptyHint"),
 
   productModalOverlay: document.getElementById("productModalOverlay"),
@@ -106,6 +114,7 @@ let deals = [];
 let editingProductId = null;
 let editingDealId = null;
 let orderFilter = "all";
+let weekOffset = 0; // 0 = الأسبوع الحالي، -1 = اللي قبله... و null = كل الأسابيع
 let ordersInitialized = false;
 let unsubscribeOrders = null;
 let dealSource = null; // { sectionId, tabId, name } لو العرض مربوط بمنتج موجود
@@ -331,9 +340,11 @@ async function loadDeals() {
 /* -------------------------------- نظرة عامة --------------------------------- */
 
 function renderOverview() {
-  els.statOrders.textContent = money(orders.length);
-  const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
-  els.statRevenue.textContent = money(revenue);
+  const thisWeek = ordersInWeek(0);
+  els.statOrders.textContent = money(thisWeek.length);
+  els.statRevenue.textContent = money(sumTotals(thisWeek));
+  els.statOrdersAll.textContent = `الإجمالي الكلي: ${money(orders.length)}`;
+  els.statRevenueAll.textContent = `الإجمالي الكلي: ${money(sumTotals(orders))}`;
   els.statProducts.textContent = money(products.length);
 
   els.statVisits.textContent = "…";
@@ -367,6 +378,43 @@ function renderOverview() {
 function orderTimeMs(o) {
   return o.createdAt && typeof o.createdAt.toDate === "function" ? o.createdAt.toDate().getTime() : 0;
 }
+
+/* ------------------------------- الأسبوع (سبت → جمعة) ------------------------------- */
+// الطلبات ما بتتمسحش: العرض بيبدأ من صفر كل سبت تلقائي، والأسابيع القديمة
+// تلاقيها بزرار "الأسبوع السابق". كده تحسب أسبوعك من غير ما تفقد أي سجل.
+const WEEK_START_DAY = 6; // 6 = السبت
+
+function weekStart(offset) {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() - ((d.getDay() - WEEK_START_DAY + 7) % 7) + offset * 7);
+  return d;
+}
+function weekBounds(offset) {
+  const start = weekStart(offset);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 7);
+  return [start.getTime(), end.getTime()];
+}
+function ordersInWeek(offset) {
+  const [from, to] = weekBounds(offset);
+  return orders.filter((o) => {
+    const t = orderTimeMs(o) || Date.now(); // طلب لسه التوقيت بتاعه ما وصلش = جديد
+    return t >= from && t < to;
+  });
+}
+function ordersForView() {
+  return weekOffset === null ? orders : ordersInWeek(weekOffset);
+}
+function oldestWeekOffset() {
+  const times = orders.map(orderTimeMs).filter((t) => t > 0);
+  if (!times.length) return 0;
+  const oldest = Math.min(...times);
+  let k = 0;
+  while (k > -520 && weekStart(k).getTime() > oldest) k--;
+  return k;
+}
+function sumTotals(list) { return list.reduce((s, o) => s + (o.total || 0), 0); }
 
 function grindLabelsRegex() {
   const labels = new Set();
@@ -957,11 +1005,39 @@ function normalizePhone(phone) {
   return p;
 }
 
+function renderWeekBar(list) {
+  const all = weekOffset === null;
+  const [from, to] = weekBounds(all ? 0 : weekOffset);
+  const lastDay = new Date(to - 86400000);
+  const fmt = (d) => d.toLocaleDateString("ar-EG", { day: "numeric", month: "long" });
+  els.weekTitle.textContent = all ? "كل الأسابيع" : weekOffset === 0 ? "هذا الأسبوع" : weekOffset === -1 ? "الأسبوع اللي فات" : `قبل ${money(-weekOffset)} أسابيع`;
+  els.weekRange.textContent = all ? `${money(orders.length)} طلب` : `${fmt(new Date(from))} ← ${fmt(lastDay)}`;
+  els.weekPrev.disabled = all || weekOffset <= oldestWeekOffset();
+  els.weekNext.disabled = all || weekOffset >= 0;
+  els.weekAll.classList.toggle("active", all);
+  els.weekAll.textContent = all ? "رجوع للأسبوع" : "كل الأسابيع";
+  els.exportOrdersBtn.textContent = all ? "⬇️ تصدير كل الطلبات (Excel)" : "⬇️ تصدير الأسبوع (Excel)";
+
+  const done = list.filter((o) => o.status === "done");
+  const pend = list.filter((o) => (o.status || "pending") === "pending");
+  const card = (label, value, sub, cls = "") => `<div class="ws-card ${cls}"><span class="ws-label">${label}</span><strong class="ws-value">${value}</strong><small class="ws-sub">${sub}</small></div>`;
+  els.weekSummary.innerHTML =
+    card("عدد الطلبات", money(list.length), " ") +
+    card("إجمالي المبيعات", `${money(sumTotals(list))} <i>ج.م</i>`, "من غير مصاريف التوصيل", "ws-main") +
+    card("🟢 تم التنفيذ", money(done.length), `${money(sumTotals(done))} ج.م`, "ws-done") +
+    card("🟠 قيد التنفيذ", money(pend.length), `${money(sumTotals(pend))} ج.م`, "ws-pend");
+}
+
+els.weekPrev.addEventListener("click", () => { weekOffset = Math.max(oldestWeekOffset(), (weekOffset ?? 0) - 1); renderOrdersTable(); });
+els.weekNext.addEventListener("click", () => { weekOffset = Math.min(0, (weekOffset ?? 0) + 1); renderOrdersTable(); });
+els.weekAll.addEventListener("click", () => { weekOffset = weekOffset === null ? 0 : null; renderOrdersTable(); });
+
 function updateOrderCounters() {
-  const pending = orders.filter((o) => (o.status || "pending") === "pending").length;
-  els.ofAll.textContent = money(orders.length);
+  const view = ordersForView();
+  const pending = view.filter((o) => (o.status || "pending") === "pending").length;
+  els.ofAll.textContent = money(view.length);
   els.ofPending.textContent = money(pending);
-  els.ofDone.textContent = money(orders.length - pending);
+  els.ofDone.textContent = money(view.length - pending);
   els.orderFilters.querySelectorAll(".of-chip").forEach((c) => c.classList.toggle("active", c.dataset.filter === orderFilter));
 }
 
@@ -973,10 +1049,12 @@ els.orderFilters.addEventListener("click", (e) => {
 });
 
 function renderOrdersTable() {
+  const view = ordersForView();
+  renderWeekBar(view);
   updateOrderCounters();
-  const shown = orders.filter((o) => orderFilter === "all" || (o.status || "pending") === orderFilter);
+  const shown = view.filter((o) => orderFilter === "all" || (o.status || "pending") === orderFilter);
   els.ordersEmptyHint.hidden = shown.length > 0;
-  els.ordersEmptyHint.textContent = orders.length === 0 ? "لسه مفيش طلبات مسجّلة." : "مفيش طلبات في الفلتر ده.";
+  els.ordersEmptyHint.textContent = orders.length === 0 ? "لسه مفيش طلبات مسجّلة." : view.length === 0 ? "مفيش طلبات في الأسبوع ده." : "مفيش طلبات في الفلتر ده.";
   els.ordersTbody.innerHTML = shown.map((o) => {
     const date = o.createdAt && typeof o.createdAt.toDate === "function"
       ? o.createdAt.toDate().toLocaleString("ar-EG")
@@ -1034,12 +1112,13 @@ function renderOrdersTable() {
 }
 
 function exportOrdersToCsv() {
-  if (orders.length === 0) {
-    alert("مفيش طلبات لسه عشان تتصدّر.");
+  const list = ordersForView();
+  if (list.length === 0) {
+    alert("مفيش طلبات في الفترة دي عشان تتصدّر.");
     return;
   }
   const headers = ["التاريخ", "الاسم", "الموبايل", "العنوان", "المنطقة", "المنتجات", "الإجمالي", "الحالة"];
-  const rows = orders.map((o) => {
+  const rows = list.map((o) => {
     const date = o.createdAt && typeof o.createdAt.toDate === "function"
       ? o.createdAt.toDate().toLocaleString("ar-EG")
       : "";
@@ -1060,7 +1139,8 @@ function exportOrdersToCsv() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `طلبات-فرحات-${new Date().toISOString().slice(0, 10)}.csv`;
+  const tag = weekOffset === null ? "كل-الطلبات" : `أسبوع-${weekStart(weekOffset).toISOString().slice(0, 10)}`;
+  a.download = `طلبات-فرحات-${tag}.csv`;
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -558,3 +558,29 @@ button, input, select, textarea { font-family: inherit; }
 
 .field-hint { display: block; margin-top: 4px; font-size: 0.72rem; font-weight: 500; color: var(--ink-soft); }
 #pfPairWith { height: auto; }
+
+/* ============================ عرض الأسبوع في الطلبات ============================ */
+.stat-sub { font-size: 0.7rem; color: var(--ink-soft); font-weight: 600; margin-top: -2px; }
+
+.week-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.wk-nav { display: flex; align-items: center; gap: 10px; background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 5px; }
+.wk-btn { padding: 8px 14px; border-radius: 999px; background: var(--cream-2); color: var(--forest); font-size: 0.8rem; font-weight: 800; cursor: pointer; border: 0; font-family: inherit; transition: background 0.15s ease; }
+.wk-btn:hover:not(:disabled) { background: #e5dcc4; }
+.wk-btn:disabled { opacity: 0.35; cursor: default; }
+.wk-label { display: flex; flex-direction: column; align-items: center; min-width: 150px; line-height: 1.35; }
+.wk-label strong { font-size: 0.92rem; color: var(--forest); }
+.wk-label small { font-size: 0.74rem; color: var(--ink-soft); font-weight: 600; }
+.wk-all { padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--paper); color: var(--ink-soft); font-family: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+.wk-all.active { background: var(--forest); color: #fff; border-color: var(--forest); }
+
+.week-summary { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+@media (max-width: 720px) { .week-summary { grid-template-columns: repeat(2, 1fr); } }
+.ws-card { display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; }
+.ws-label { font-size: 0.76rem; font-weight: 800; color: var(--ink-soft); }
+.ws-value { font-family: var(--font-numeric); font-size: 1.5rem; font-weight: 900; color: var(--forest); }
+.ws-value i { font-size: 0.6em; font-style: normal; font-weight: 800; }
+.ws-sub { font-size: 0.72rem; color: var(--ink-soft); font-weight: 700; min-height: 1em; }
+.ws-main { background: linear-gradient(160deg, #fffaf0, #f6eedb); border-color: #e5cf9a; }
+.ws-main .ws-value { color: var(--gold, #ad7a2e); }
+.ws-done { border-top: 3px solid #2e9e3f; }
+.ws-pend { border-top: 3px solid #f0a020; }

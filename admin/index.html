@@ -65,12 +65,14 @@
         <div class="stat-card">
           <span class="stat-icon">🧾</span>
           <span class="stat-value" id="statOrders">—</span>
-          <span class="stat-label">إجمالي الطلبات</span>
+          <span class="stat-label">طلبات هذا الأسبوع</span>
+          <small class="stat-sub" id="statOrdersAll"></small>
         </div>
         <div class="stat-card">
           <span class="stat-icon">💰</span>
           <span class="stat-value" id="statRevenue">—</span>
-          <span class="stat-label">إجمالي المبيعات التقريبي (ج.م)</span>
+          <span class="stat-label">مبيعات هذا الأسبوع (ج.م)</span>
+          <small class="stat-sub" id="statRevenueAll"></small>
         </div>
         <div class="stat-card">
           <span class="stat-icon">👀</span>
@@ -114,8 +116,9 @@
 
       <p class="dash-note">
         ملحوظة: العدد ده بيسجّل كل مرة حد يفتح فيها الموقع (page views)، مش عدد
-        الزوار الفريدين. وعدد الطلبات وإجمالي المبيعات مبنيين على الطلبات اللي
-        اتسجّلت من الموقع بس بعد ما اتفعّلت لوحة التحكم.
+        الزوار الفريدين. وأرقام الطلبات والمبيعات بتخص الأسبوع الحالي (من السبت
+        للجمعة) وبتبدأ من صفر كل سبت، والإجمالي الكلي تحتها. الطلبات القديمة
+        محفوظة وتلاقيها في تبويب الطلبات.
       </p>
     </section>
 
@@ -176,6 +179,16 @@
 
     <!-- الطلبات -->
     <section class="dash-panel" id="panel-orders">
+      <div class="week-bar" id="weekBar">
+        <div class="wk-nav">
+          <button type="button" class="wk-btn" id="weekPrev">→ الأسبوع السابق</button>
+          <div class="wk-label"><strong id="weekTitle">هذا الأسبوع</strong><small id="weekRange"></small></div>
+          <button type="button" class="wk-btn" id="weekNext">الأسبوع التالي ←</button>
+        </div>
+        <button type="button" class="wk-all" id="weekAll">كل الأسابيع</button>
+      </div>
+      <div class="week-summary" id="weekSummary"></div>
+
       <div class="panel-toolbar">
         <div class="order-filters" id="orderFilters">
           <button type="button" class="of-chip active" data-filter="all">الكل <b id="ofAll">0</b></button>
